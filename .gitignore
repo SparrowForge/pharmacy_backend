@@ -16,5 +16,5 @@ node_modules
 .next/
 .DS_Store
 .npm-cache/
-backend/dist/
-backend/coverage/
+dist/
+coverage/
