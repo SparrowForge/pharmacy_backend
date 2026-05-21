@@ -1,11 +1,13 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -14,6 +16,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
 
@@ -47,6 +50,7 @@ type JwtPayload = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly jwtSecret =
     process.env.JWT_SECRET?.trim() || 'change-me-in-production';
   private readonly jwtRefreshSecret =
@@ -68,6 +72,19 @@ export class AuthService {
   );
   private readonly exposeInternalTokens =
     (process.env.NODE_ENV || 'development') !== 'production';
+  private readonly verificationBaseUrl =
+    process.env.VERIFICATION_BASE_URL?.trim() ||
+    process.env.FRONTEND_URL?.trim() ||
+    'http://localhost:3000';
+  private readonly fromEmail =
+    process.env.FROM_EMAIL?.trim() || process.env.SMTP_USER?.trim() || '';
+  private readonly fromName = process.env.FROM_NAME?.trim() || 'Pharmacy App';
+  private readonly smtpHost = process.env.SMTP_HOST?.trim() || '';
+  private readonly smtpPort = Number(process.env.SMTP_PORT || 587);
+  private readonly smtpSecure = this.parseBooleanEnv(process.env.SMTP_SECURE);
+  private readonly smtpUser = process.env.SMTP_USER?.trim() || '';
+  private readonly smtpPass = process.env.SMTP_PASS?.trim() || '';
+  private smtpTransporter: Transporter | null | undefined;
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -107,13 +124,21 @@ export class AuthService {
     );
 
     const user = result.rows[0];
+    const emailDispatched = await this.sendVerificationEmailByToken(
+      user,
+      verificationToken,
+    );
     const response: Record<string, unknown> = {
-      message: 'Registration successful. Verify your email to continue.',
+      message: emailDispatched
+        ? 'Registration successful. Verification email sent.'
+        : 'Registration successful. Verify your email to continue.',
       user: this.toPublicUser(user),
+      emailDispatched,
     };
 
     if (this.exposeInternalTokens) {
       response.verificationToken = verificationToken;
+      response.verificationLink = this.buildVerificationLink(verificationToken);
     }
 
     return response;
@@ -259,6 +284,10 @@ export class AuthService {
   }
 
   async resendVerificationEmail(dto: ResendVerificationEmailDto) {
+    return this.sendVerificationEmail({ email: dto.email });
+  }
+
+  async sendVerificationEmail(dto: SendVerificationEmailDto) {
     const email = this.normalizeEmail(dto.email);
     const user = await this.findUserByEmail(email);
 
@@ -286,11 +315,22 @@ export class AuthService {
     );
 
     const response: Record<string, unknown> = {
-      message: 'Verification email resent',
+      message: 'Verification email sent',
+      emailDispatched: false,
     };
+
+    const emailDispatched = await this.sendVerificationEmailByToken(
+      user,
+      verificationToken,
+    );
+    response.emailDispatched = emailDispatched;
+    response.message = emailDispatched
+      ? 'Verification email sent'
+      : 'Verification token generated. Email delivery failed or is not configured.';
 
     if (this.exposeInternalTokens) {
       response.verificationToken = verificationToken;
+      response.verificationLink = this.buildVerificationLink(verificationToken);
     }
 
     return response;
@@ -406,6 +446,95 @@ export class AuthService {
     return {
       message: 'Password reset successful',
     };
+  }
+
+  private getSmtpTransporter() {
+    if (this.smtpTransporter !== undefined) {
+      return this.smtpTransporter;
+    }
+
+    if (
+      !this.smtpHost ||
+      !Number.isFinite(this.smtpPort) ||
+      !this.smtpUser ||
+      !this.smtpPass
+    ) {
+      this.smtpTransporter = null;
+      this.logger.warn(
+        'SMTP is not fully configured. Verification emails will not be sent.',
+      );
+      return this.smtpTransporter;
+    }
+
+    this.smtpTransporter = nodemailer.createTransport({
+      host: this.smtpHost,
+      port: this.smtpPort,
+      secure: this.smtpSecure,
+      auth: {
+        user: this.smtpUser,
+        pass: this.smtpPass,
+      },
+    });
+
+    return this.smtpTransporter;
+  }
+
+  private buildVerificationLink(token: string) {
+    const baseUrl = this.verificationBaseUrl.replace(/\/+$/, '');
+    return `${baseUrl}/verify?verify_token=${encodeURIComponent(token)}`;
+  }
+
+  private renderVerificationEmailHtml(fullName: string, verificationLink: string) {
+    return `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+        <h2 style="margin: 0 0 12px;">Verify Your Email</h2>
+        <p style="margin: 0 0 12px;">Hi ${this.escapeHtml(fullName)},</p>
+        <p style="margin: 0 0 16px;">
+          Welcome To Pharmacy Forge! <br />Thanks for registering. Please verify your email address to activate your account.
+        </p>
+        <a
+          href="${verificationLink}"
+          style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;"
+        >
+          Verify Email
+        </a>
+        <p style="margin: 16px 0 0; font-size: 13px; color: #4b5563;">
+          If the button does not work, use this link:
+          <br />
+          <a href="${verificationLink}">${verificationLink}</a>
+        </p>
+      </div>
+    `;
+  }
+
+  private async sendVerificationEmailByToken(user: UserRow, token: string) {
+    const transporter = this.getSmtpTransporter();
+    if (!transporter || !this.fromEmail) {
+      return false;
+    }
+
+    const verificationLink = this.buildVerificationLink(token);
+    const recipientName = user.full_name?.trim() || 'User';
+    const subject = 'Verify your email address';
+
+    try {
+      await transporter.sendMail({
+        from: this.fromName
+          ? `"${this.fromName}" <${this.fromEmail}>`
+          : this.fromEmail,
+        to: user.email,
+        subject,
+        html: this.renderVerificationEmailHtml(recipientName, verificationLink),
+        text: `Verify your email: ${verificationLink}`,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Failed to send verification email to ${user.email}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return false;
+    }
   }
 
   private async findUserByEmail(email: string) {
@@ -528,6 +657,21 @@ export class AuthService {
     };
 
     return amount * multiplierMap[unit];
+  }
+
+  private parseBooleanEnv(value: string | undefined) {
+    if (!value) return false;
+    const normalized = value.trim().toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private toPublicUser(user: UserRow) {

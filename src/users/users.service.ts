@@ -7,7 +7,6 @@ import {
 import { compare, hash } from 'bcryptjs';
 import { QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -39,43 +38,20 @@ type UserRow = QueryResultRow & {
 export class UsersService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async createUser(dto: CreateUserDto) {
-    const email = this.normalizeEmail(dto.email);
-    await this.ensureEmailNotUsed(email);
-
-    const passwordHash = await hash(dto.password, 12);
-
-    const result = await this.databaseService.query<UserRow>(
-      `
-      INSERT INTO phar_users (
-        shop_id, branch_id, role, full_name, email, phone, password, status, is_verified
-      )
-      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING *
-      `,
-      [
-        dto.shopId ?? null,
-        dto.branchId ?? null,
-        dto.role ?? 'staff',
-        dto.fullName,
-        email,
-        dto.phone ?? null,
-        passwordHash,
-        dto.status ?? true,
-        dto.isVerified ?? false,
-      ],
-    );
-
-    return this.mapUser(result.rows[0]);
-  }
-
   async getUsers(query: ListUsersQueryDto) {
     const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+    const limit = query.limit ?? 10;
     const offset = (page - 1) * limit;
 
-    const filters: string[] = ['is_delete = FALSE'];
+    const filters: string[] = [];
     const params: unknown[] = [];
+
+    const normalizedStatus = query.status?.trim().toLowerCase();
+    if (normalizedStatus === 'deleted') {
+      filters.push('is_delete = TRUE');
+    } else {
+      filters.push('is_delete = FALSE');
+    }
 
     if (query.search) {
       params.push(`%${query.search.trim()}%`);
@@ -86,17 +62,54 @@ export class UsersService {
 
     if (query.role) {
       params.push(query.role);
-      filters.push(`role = $${params.length}`);
+      filters.push(`LOWER(role::text) = LOWER($${params.length})`);
+    }
+
+    if (query.name) {
+      params.push(`%${query.name.trim()}%`);
+      filters.push(`full_name ILIKE $${params.length}`);
+    }
+
+    if (query.email) {
+      params.push(`%${query.email.trim()}%`);
+      filters.push(`email ILIKE $${params.length}`);
+    }
+
+    if (query.phone_no) {
+      params.push(`%${query.phone_no.trim()}%`);
+      filters.push(`phone ILIKE $${params.length}`);
     }
 
     if (query.status !== undefined) {
-      params.push(query.status === 'true');
-      filters.push(`status = $${params.length}::boolean`);
+      if (
+        normalizedStatus === 'true' ||
+        normalizedStatus === '1' ||
+        normalizedStatus === 'active'
+      ) {
+        params.push(true);
+        filters.push(`status = $${params.length}::boolean`);
+      }
+
+      if (
+        normalizedStatus === 'false' ||
+        normalizedStatus === '0' ||
+        normalizedStatus === 'inactive'
+      ) {
+        params.push(false);
+        filters.push(`status = $${params.length}::boolean`);
+      }
     }
 
     if (query.isVerified !== undefined) {
-      params.push(query.isVerified === 'true');
-      filters.push(`is_verified = $${params.length}::boolean`);
+      const normalizedVerified = query.isVerified.trim().toLowerCase();
+      if (normalizedVerified === 'true' || normalizedVerified === '1') {
+        params.push(true);
+        filters.push(`is_verified = $${params.length}::boolean`);
+      }
+      if (normalizedVerified === 'false' || normalizedVerified === '0') {
+        params.push(false);
+        filters.push(`is_verified = $${params.length}::boolean`);
+      }
     }
 
     if (query.shopId) {
@@ -107,6 +120,16 @@ export class UsersService {
     if (query.branchId) {
       params.push(query.branchId);
       filters.push(`branch_id = $${params.length}::uuid`);
+    }
+
+    if (query.class_id) {
+      params.push(query.class_id.trim());
+      filters.push(`shop_id::text = $${params.length}`);
+    }
+
+    if (query.section) {
+      params.push(query.section.trim());
+      filters.push(`branch_id::text = $${params.length}`);
     }
 
     const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';

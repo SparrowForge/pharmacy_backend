@@ -1,0 +1,32 @@
+export const BASIC_ENTITY_TABLES: Record<string, string> = {
+  countries: 'phar_countries',
+  divisions: 'phar_divisions',
+  districts: 'phar_districts',
+  thanas: 'phar_thanas',
+  regions: 'phar_regions',
+  zones: 'phar_zones',
+  routes: 'phar_routes',
+  lines: 'phar_lines',
+  companies: 'phar_companies',
+  company_addresses: 'phar_company_addresses',
+  company_contacts: 'phar_company_contacts',
+  shops: 'phar_shops',
+  branches: 'phar_branches',
+  media_files: 'phar_media_files',
+  product_categories: 'phar_product_categories',
+  product_brands: 'phar_product_brands',
+  product_units: 'phar_product_units',
+  products: 'phar_products',
+  product_images: 'phar_product_images',
+  product_tags: 'phar_product_tags',
+  product_badges: 'phar_product_badges',
+  product_batches: 'phar_product_batches',
+  warehouses: 'phar_warehouses',
+  payment_methods: 'phar_payment_methods',
+  discount_codes: 'phar_discount_codes',
+  product_offers: 'phar_product_offers',
+  business_settings: 'phar_business_settings',
+};
+
+export const BASIC_ENTITY_NAMES = Object.keys(BASIC_ENTITY_TABLES);
+export const BASIC_ENTITY_ROUTE_PATTERN = BASIC_ENTITY_NAMES.join('|');

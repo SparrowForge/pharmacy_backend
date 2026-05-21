@@ -175,6 +175,7 @@ CREATE TABLE phar_countries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code VARCHAR(10) UNIQUE,
   name TEXT NOT NULL,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -184,6 +185,7 @@ CREATE TABLE phar_divisions (
   country_id UUID NOT NULL REFERENCES phar_countries(id),
   code VARCHAR(20),
   name TEXT NOT NULL,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -193,6 +195,7 @@ CREATE TABLE phar_districts (
   division_id UUID NOT NULL REFERENCES phar_divisions(id),
   code VARCHAR(20),
   name TEXT NOT NULL,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -203,6 +206,7 @@ CREATE TABLE phar_thanas (
   code VARCHAR(20),
   name TEXT NOT NULL,
   postal_code VARCHAR(20),
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -211,6 +215,7 @@ CREATE TABLE phar_regions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -220,6 +225,7 @@ CREATE TABLE phar_zones (
   region_id UUID NOT NULL REFERENCES phar_regions(id),
   name TEXT NOT NULL,
   description TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -229,6 +235,7 @@ CREATE TABLE phar_routes (
   zone_id UUID NOT NULL REFERENCES phar_zones(id),
   name TEXT NOT NULL,
   description TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -238,6 +245,7 @@ CREATE TABLE phar_lines (
   route_id UUID NOT NULL REFERENCES phar_routes(id),
   name TEXT NOT NULL,
   description TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -275,6 +283,7 @@ CREATE TABLE phar_companies (
   total_spent NUMERIC(16,2) DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'active',
   notes TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -296,6 +305,7 @@ CREATE TABLE phar_company_addresses (
   district_id UUID REFERENCES phar_districts(id),
   thana_id UUID REFERENCES phar_thanas(id),
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -309,6 +319,7 @@ CREATE TABLE phar_company_contacts (
   phone TEXT,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
   notes TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -336,6 +347,7 @@ CREATE TABLE phar_shops (
   route_id UUID REFERENCES phar_routes(id),
   line_id UUID REFERENCES phar_lines(id),
   branch_limit INT DEFAULT 1,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -356,6 +368,7 @@ CREATE TABLE phar_branches (
   email TEXT,
   phone TEXT,
   status TEXT NOT NULL DEFAULT 'active',
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -407,6 +420,7 @@ CREATE TABLE phar_media_files (
   file_size BIGINT,
   alt_text TEXT,
   uploaded_by UUID REFERENCES phar_users(id),
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -422,6 +436,7 @@ CREATE TABLE phar_product_categories (
   slug TEXT UNIQUE,
   description TEXT,
   icon TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -433,6 +448,7 @@ CREATE TABLE phar_product_brands (
   description TEXT,
   manufacturer_id UUID REFERENCES phar_companies(id),
   logo_media_id UUID REFERENCES phar_media_files(id),
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -442,6 +458,7 @@ CREATE TABLE phar_product_units (
   name TEXT NOT NULL UNIQUE,
   short_name VARCHAR(30) NOT NULL UNIQUE,
   description TEXT,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -487,6 +504,7 @@ CREATE TABLE phar_products (
   product_video_url TEXT,
   status phar_product_status NOT NULL DEFAULT 'active',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -504,6 +522,7 @@ CREATE TABLE phar_product_images (
   media_id UUID NOT NULL REFERENCES phar_media_files(id),
   sort_order INT DEFAULT 0,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -511,6 +530,7 @@ CREATE TABLE phar_product_tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID NOT NULL REFERENCES phar_products(id) ON DELETE CASCADE,
   tag TEXT NOT NULL,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -518,6 +538,7 @@ CREATE TABLE phar_product_badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID NOT NULL REFERENCES phar_products(id) ON DELETE CASCADE,
   badge TEXT NOT NULL,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -536,6 +557,7 @@ CREATE TABLE phar_product_batches (
   status TEXT NOT NULL DEFAULT 'available',
   location_description TEXT,
   received_date DATE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(product_id, batch_number)
@@ -556,6 +578,7 @@ CREATE TABLE phar_warehouses (
   name TEXT NOT NULL,
   address TEXT,
   status TEXT NOT NULL DEFAULT 'active',
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1004,6 +1027,7 @@ CREATE TABLE phar_payment_methods (
   description TEXT,
   icon TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1058,6 +1082,7 @@ CREATE TABLE phar_discount_codes (
   valid_from DATE,
   valid_until DATE,
   is_active BOOLEAN DEFAULT TRUE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1072,6 +1097,7 @@ CREATE TABLE phar_product_offers (
   starts_at TIMESTAMPTZ,
   ends_at TIMESTAMPTZ,
   is_active BOOLEAN DEFAULT TRUE,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -1113,6 +1139,7 @@ CREATE TABLE phar_business_settings (
   setting_value TEXT,
   description TEXT,
   data_type VARCHAR(50),
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(shop_id, setting_key)
 );

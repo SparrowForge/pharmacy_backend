@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   ParseUUIDPipe,
   Post,
   Query,
@@ -34,20 +33,18 @@ export class AuditsController {
   @ApiOperation({ summary: 'Get audit logs by resource' })
   getByResource(
     @Param('resource') resource: string,
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query() query: ListAuditsQueryDto,
   ) {
-    return this.auditsService.getAuditsByResource(resource, page ?? 1, limit ?? 20);
+    return this.auditsService.getAuditsByResource(resource, query.page, query.limit);
   }
 
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get audit logs by user' })
   getByUser(
     @Param('userId', new ParseUUIDPipe()) userId: string,
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query() query: ListAuditsQueryDto,
   ) {
-    return this.auditsService.getAuditsByUser(userId, page ?? 1, limit ?? 20);
+    return this.auditsService.getAuditsByUser(userId, query.page, query.limit);
   }
 
   @Post('cleanup')

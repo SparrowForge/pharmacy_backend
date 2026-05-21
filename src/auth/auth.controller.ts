@@ -8,6 +8,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResendVerificationEmailDto } from './dto/resend-verification-email.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SendVerificationEmailDto } from './dto/send-verification-email.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { VerifyResetCodeDto } from './dto/verify-reset-code.dto';
 
@@ -50,6 +51,12 @@ export class AuthController {
   @ApiOperation({ summary: 'Resend email verification link' })
   resendVerificationEmail(@Body() dto: ResendVerificationEmailDto) {
     return this.authService.resendVerificationEmail(dto);
+  }
+
+  @Post('send-verification-email')
+  @ApiOperation({ summary: 'Send verification email with verify button link' })
+  sendVerificationEmail(@Body() dto: SendVerificationEmailDto) {
+    return this.authService.sendVerificationEmail(dto);
   }
 
   @Post('forgot-password')

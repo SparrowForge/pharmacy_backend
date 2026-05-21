@@ -1,8 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsBooleanString,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,8 +9,6 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { USER_ROLES } from '../constants/user-roles';
-import type { UserRole } from '../constants/user-roles';
 
 export class ListUsersQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -22,13 +18,13 @@ export class ListUsersQueryDto {
   @Min(1)
   page = 1;
 
-  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 100 })
   @Type(() => Number)
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(100)
-  limit = 20;
+  limit = 10;
 
   @ApiPropertyOptional({ description: 'Search by full name, email, or phone' })
   @IsOptional()
@@ -36,19 +32,42 @@ export class ListUsersQueryDto {
   @MaxLength(120)
   search?: string;
 
-  @ApiPropertyOptional({ enum: USER_ROLES })
+  @ApiPropertyOptional({ description: 'User role filter' })
   @IsOptional()
-  @IsIn(USER_ROLES)
-  role?: UserRole;
+  @IsString()
+  @MaxLength(50)
+  role?: string;
 
-  @ApiPropertyOptional({ description: 'true or false' })
+  @ApiPropertyOptional({ description: 'Filter by name' })
   @IsOptional()
-  @IsBooleanString()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by email' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  email?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by phone number' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone_no?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by status (active|inactive|deleted|true|false)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
   status?: string;
 
   @ApiPropertyOptional({ description: 'true or false' })
   @IsOptional()
-  @IsBooleanString()
+  @IsString()
+  @MaxLength(10)
   isVerified?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
@@ -60,4 +79,20 @@ export class ListUsersQueryDto {
   @IsOptional()
   @IsUUID()
   branchId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alias filter (mapped to shop_id)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  class_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alias filter (mapped to branch_id)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  section?: string;
 }
