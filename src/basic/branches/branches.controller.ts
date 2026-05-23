@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from '../../auth/decorators/public.decorator';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { ListBranchesQueryDto } from './dto/list-branches-query.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -21,6 +22,7 @@ export class BranchesController {
   constructor(private readonly branchesService: BranchesService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all branches with pagination and filters' })
   list(@Query() query: ListBranchesQueryDto) {
     return this.branchesService.list(query);

@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Public } from '../../auth/decorators/public.decorator';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { ListShopsQueryDto } from './dto/list-shops-query.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
@@ -21,6 +22,7 @@ export class ShopsController {
   constructor(private readonly shopsService: ShopsService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all shops with pagination and filters' })
   list(@Query() query: ListShopsQueryDto) {
     return this.shopsService.list(query);

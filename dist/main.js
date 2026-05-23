@@ -5,10 +5,25 @@ const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const app_module_1 = require("./app.module");
+const parseOrigins = (value) => value
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
+const getAllowedOrigins = () => {
+    const origins = new Set(['http://localhost:3000']);
+    for (const origin of parseOrigins(process.env.FRONTEND_URL)) {
+        origins.add(origin);
+    }
+    for (const origin of parseOrigins(process.env.CORS_ORIGINS)) {
+        origins.add(origin);
+    }
+    return [...origins];
+};
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const apiPrefix = process.env.API_PREFIX ?? 'api';
     const apiVersion = process.env.API_VERSION ?? 'v1';
+    const allowedOrigins = getAllowedOrigins();
     app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
@@ -32,7 +47,13 @@ async function bootstrap() {
     const document = swagger_1.SwaggerModule.createDocument(app, swaggerConfig);
     swagger_1.SwaggerModule.setup('api/docs', app, document);
     app.enableCors({
-        origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+                return;
+            }
+            callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
+        },
         credentials: true,
     });
     await app.listen(process.env.PORT ?? 4000);
