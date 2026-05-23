@@ -5,6 +5,7 @@ import { CompaniesModule } from './companies/companies.module';
 import { CompanyAddressesModule } from './company_addresses/company_addresses.module';
 import { CompanyContactsModule } from './company_contacts/company_contacts.module';
 import { CountriesModule } from './countries/countries.module';
+import { DatatypesModule } from './datatypes/datatypes.module';
 import { DiscountCodesModule } from './discount_codes/discount_codes.module';
 import { DistrictsModule } from './districts/districts.module';
 import { DivisionsModule } from './divisions/divisions.module';
@@ -28,6 +29,6 @@ import { WarehousesModule } from './warehouses/warehouses.module';
 import { ZonesModule } from './zones/zones.module';
 
 @Module({
-  imports: [BranchesModule, BusinessSettingsModule, CompaniesModule, CompanyAddressesModule, CompanyContactsModule, CountriesModule, DiscountCodesModule, DistrictsModule, DivisionsModule, LinesModule, MediaFilesModule, PaymentMethodsModule, ProductBadgesModule, ProductBatchesModule, ProductBrandsModule, ProductCategoriesModule, ProductImagesModule, ProductOffersModule, ProductsModule, ProductTagsModule, ProductUnitsModule, RegionsModule, RoutesModule, ShopsModule, ThanasModule, WarehousesModule, ZonesModule],
+  imports: [BranchesModule, BusinessSettingsModule, CompaniesModule, CompanyAddressesModule, CompanyContactsModule, CountriesModule, DatatypesModule, DiscountCodesModule, DistrictsModule, DivisionsModule, LinesModule, MediaFilesModule, PaymentMethodsModule, ProductBadgesModule, ProductBatchesModule, ProductBrandsModule, ProductCategoriesModule, ProductImagesModule, ProductOffersModule, ProductsModule, ProductTagsModule, ProductUnitsModule, RegionsModule, RoutesModule, ShopsModule, ThanasModule, WarehousesModule, ZonesModule],
 })
 export class BasicTablesModule {}
