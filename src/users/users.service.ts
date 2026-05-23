@@ -8,6 +8,7 @@ import { compare, hash } from 'bcryptjs';
 import { QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { ListUsersResponseDto, UserListItemDto } from './dto/list-users-response.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -38,46 +39,53 @@ type UserRow = QueryResultRow & {
 export class UsersService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async getUsers(query: ListUsersQueryDto) {
+  async getUsers(query: ListUsersQueryDto): Promise<ListUsersResponseDto> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const offset = (page - 1) * limit;
 
+    const joins = new Set<string>();
     const filters: string[] = [];
     const params: unknown[] = [];
 
     const normalizedStatus = query.status?.trim().toLowerCase();
     if (normalizedStatus === 'deleted') {
-      filters.push('is_delete = TRUE');
+      filters.push('u.is_delete = TRUE');
     } else {
-      filters.push('is_delete = FALSE');
+      filters.push('u.is_delete = FALSE');
     }
 
     if (query.search) {
       params.push(`%${query.search.trim()}%`);
       filters.push(
-        `(full_name ILIKE $${params.length} OR email ILIKE $${params.length} OR phone ILIKE $${params.length})`,
+        `(u.full_name ILIKE $${params.length} OR u.email ILIKE $${params.length} OR u.phone ILIKE $${params.length})`,
       );
     }
 
     if (query.role) {
       params.push(query.role);
-      filters.push(`LOWER(role::text) = LOWER($${params.length})`);
+      filters.push(`LOWER(u.role::text) = LOWER($${params.length})`);
+    }
+
+    if (query.department) {
+      joins.add('LEFT JOIN phar_branches b ON b.id = u.branch_id');
+      params.push(`%${query.department.trim()}%`);
+      filters.push(`b.name ILIKE $${params.length}`);
     }
 
     if (query.name) {
       params.push(`%${query.name.trim()}%`);
-      filters.push(`full_name ILIKE $${params.length}`);
+      filters.push(`u.full_name ILIKE $${params.length}`);
     }
 
     if (query.email) {
       params.push(`%${query.email.trim()}%`);
-      filters.push(`email ILIKE $${params.length}`);
+      filters.push(`u.email ILIKE $${params.length}`);
     }
 
     if (query.phone_no) {
       params.push(`%${query.phone_no.trim()}%`);
-      filters.push(`phone ILIKE $${params.length}`);
+      filters.push(`u.phone ILIKE $${params.length}`);
     }
 
     if (query.status !== undefined) {
@@ -87,7 +95,7 @@ export class UsersService {
         normalizedStatus === 'active'
       ) {
         params.push(true);
-        filters.push(`status = $${params.length}::boolean`);
+        filters.push(`u.status = $${params.length}::boolean`);
       }
 
       if (
@@ -96,48 +104,42 @@ export class UsersService {
         normalizedStatus === 'inactive'
       ) {
         params.push(false);
-        filters.push(`status = $${params.length}::boolean`);
+        filters.push(`u.status = $${params.length}::boolean`);
       }
+    } else {
+      filters.push('u.status = TRUE');
     }
 
     if (query.isVerified !== undefined) {
       const normalizedVerified = query.isVerified.trim().toLowerCase();
       if (normalizedVerified === 'true' || normalizedVerified === '1') {
         params.push(true);
-        filters.push(`is_verified = $${params.length}::boolean`);
+        filters.push(`u.is_verified = $${params.length}::boolean`);
       }
       if (normalizedVerified === 'false' || normalizedVerified === '0') {
         params.push(false);
-        filters.push(`is_verified = $${params.length}::boolean`);
+        filters.push(`u.is_verified = $${params.length}::boolean`);
       }
     }
 
     if (query.shopId) {
       params.push(query.shopId);
-      filters.push(`shop_id = $${params.length}::uuid`);
+      filters.push(`u.shop_id = $${params.length}::uuid`);
     }
 
     if (query.branchId) {
       params.push(query.branchId);
-      filters.push(`branch_id = $${params.length}::uuid`);
+      filters.push(`u.branch_id = $${params.length}::uuid`);
     }
-
-    if (query.class_id) {
-      params.push(query.class_id.trim());
-      filters.push(`shop_id::text = $${params.length}`);
-    }
-
-    if (query.section) {
-      params.push(query.section.trim());
-      filters.push(`branch_id::text = $${params.length}`);
-    }
-
+    
+    const joinClause = [...joins].join(' ');
     const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
     const countResult = await this.databaseService.query<{ total: number }>(
       `
       SELECT COUNT(*)::int AS total
-      FROM phar_users
+      FROM phar_users u
+      ${joinClause}
       ${whereClause}
       `,
       params,
@@ -145,21 +147,36 @@ export class UsersService {
 
     const usersResult = await this.databaseService.query<UserRow>(
       `
-      SELECT *
-      FROM phar_users
+      SELECT u.*
+      FROM phar_users u
+      ${joinClause}
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY u.created_at DESC
       LIMIT $${params.length + 1}
       OFFSET $${params.length + 2}
       `,
       [...params, limit, offset],
     );
 
+    const total = countResult.rows[0]?.total ?? 0;
+    const totalPages = total > 0 ? Math.ceil(total / limit) : 1;
+    const items = usersResult.rows.map((row) => this.mapUserListItem(row));
+
     return {
-      page,
-      limit,
-      total: countResult.rows[0]?.total ?? 0,
-      data: usersResult.rows.map((row) => this.mapUser(row)),
+      success: true,
+      message: 'Users retrieved successfully',
+      data: {
+        items,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      },
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -363,7 +380,11 @@ export class UsersService {
     return email.trim().toLowerCase();
   }
 
-  private mapUser(row: UserRow) {
+  private mapUserListItem(row: UserRow): UserListItemDto {
+    return this.mapUser(row);
+  }
+
+  private mapUser(row: UserRow): UserListItemDto {
     return {
       id: row.id,
       shopId: row.shop_id,

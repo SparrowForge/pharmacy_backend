@@ -11,20 +11,20 @@ import {
 } from 'class-validator';
 
 export class ListUsersQueryDto {
-  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @ApiPropertyOptional({ type: Number, default: 1, minimum: 1 })
   @Type(() => Number)
   @IsOptional()
   @IsInt()
   @Min(1)
-  page = 1;
+  page: number = 1;
 
-  @ApiPropertyOptional({ default: 10, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({ type: Number, default: 10, minimum: 1, maximum: 100 })
   @Type(() => Number)
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(100)
-  limit = 10;
+  limit: number = 10;
 
   @ApiPropertyOptional({ description: 'Search by full name, email, or phone' })
   @IsOptional()
@@ -37,6 +37,12 @@ export class ListUsersQueryDto {
   @IsString()
   @MaxLength(50)
   role?: string;
+
+  @ApiPropertyOptional({ description: 'Department filter (branch name)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  department?: string;
 
   @ApiPropertyOptional({ description: 'Filter by name' })
   @IsOptional()
