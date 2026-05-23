@@ -19,6 +19,15 @@ async function bootstrap() {
         .setTitle('Pharmacy Management API')
         .setDescription('Pharmacy backend API documentation')
         .setVersion('1.0.0')
+        .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+        description: 'Enter JWT access token',
+    }, 'bearer')
+        .addSecurityRequirements('bearer')
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, swaggerConfig);
     swagger_1.SwaggerModule.setup('api/docs', app, document);

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { normalizeDatabaseUrl } from './lib/normalize-database-url.mjs';
 
 const { Client } = pg;
 
@@ -20,7 +21,8 @@ function loadDatabaseUrl() {
 }
 
 async function run() {
-  const databaseUrl = process.env.DATABASE_URL || loadDatabaseUrl();
+  const rawDatabaseUrl = process.env.DATABASE_URL || loadDatabaseUrl();
+  const databaseUrl = normalizeDatabaseUrl(rawDatabaseUrl);
   const client = new Client({ connectionString: databaseUrl });
 
   await client.connect();

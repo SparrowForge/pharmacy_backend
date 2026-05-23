@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { normalizeDatabaseUrl } from './lib/normalize-database-url.mjs';
 
 const { Client } = pg;
 
@@ -52,7 +53,8 @@ function locationFromPosition(sql, position) {
 async function run() {
   loadEnvFile(defaultEnvPath);
 
-  const databaseUrl = process.env.DATABASE_URL;
+  const rawDatabaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = rawDatabaseUrl ? normalizeDatabaseUrl(rawDatabaseUrl) : '';
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is not set in environment or backend/.env');
   }

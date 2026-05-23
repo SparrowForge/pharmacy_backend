@@ -41,6 +41,22 @@ type UserRow = QueryResultRow & {
   created_at: string;
 };
 
+type BranchLookupRow = QueryResultRow & {
+  id: string;
+  shop_id: string;
+};
+
+type AuditLogInput = {
+  userId: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  oldValues: unknown;
+  newValues: unknown;
+  ipAddress: string | null;
+  userAgent: string | null;
+};
+
 type JwtPayload = {
   sub: string;
   email: string;
@@ -93,37 +109,98 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const email = this.normalizeEmail(dto.email);
+    const requestedShopId = dto.shopId?.trim() ?? null;
+    const requestedBranchId = dto.branchId?.trim() ?? null;
 
     const existingUser = await this.findUserByEmail(email);
     if (existingUser) {
       throw new BadRequestException('Email already registered');
     }
 
+    if (requestedShopId) {
+      const shopExists = await this.shopExists(requestedShopId);
+      if (!shopExists) {
+        throw new BadRequestException('Invalid shopId');
+      }
+    }
+
+    let resolvedShopId = requestedShopId;
+    if (requestedBranchId) {
+      const branch = await this.findBranchById(requestedBranchId);
+      if (!branch) {
+        throw new BadRequestException('Invalid branchId');
+      }
+
+      if (resolvedShopId && resolvedShopId !== branch.shop_id) {
+        throw new BadRequestException(
+          'branchId does not belong to the provided shopId',
+        );
+      }
+
+      if (!resolvedShopId) {
+        resolvedShopId = branch.shop_id;
+      }
+    }
+
     const passwordHash = await hash(dto.password, 12);
     const verificationToken = this.generateToken(32);
 
-    const result = await this.databaseService.query<UserRow>(
-      `
-      INSERT INTO phar_users (
-        shop_id, branch_id, role, full_name, email, phone, password,
-        is_verified, verification_token
-      )
-      VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, FALSE, $8)
-      RETURNING *
-      `,
-      [
-        dto.shopId ?? null,
-        dto.branchId ?? null,
-        dto.role ?? 'staff',
-        dto.fullName,
-        email,
-        dto.phone ?? null,
-        passwordHash,
-        verificationToken,
-      ],
-    );
+    let result;
+    try {
+      result = await this.databaseService.query<UserRow>(
+        `
+        INSERT INTO phar_users (
+          shop_id, branch_id, role, full_name, email, phone, password,
+          is_verified, verification_token
+        )
+        VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, FALSE, $8)
+        RETURNING *
+        `,
+        [
+          resolvedShopId,
+          requestedBranchId,
+          dto.role ?? 'staff',
+          dto.fullName,
+          email,
+          dto.phone ?? null,
+          passwordHash,
+          verificationToken,
+        ],
+      );
+    } catch (error) {
+      if (this.getPgErrorCode(error) === '23505') {
+        throw new BadRequestException('Email already registered');
+      }
+
+      if (this.getPgErrorCode(error) === '23503') {
+        throw new BadRequestException('Invalid shopId or branchId');
+      }
+
+      throw error;
+    }
 
     const user = result.rows[0];
+    await this.createAuditLog({
+      userId: user.id,
+      action: 'register',
+      entityType: 'user',
+      entityId: user.id,
+      oldValues: null,
+      newValues: {
+        id: user.id,
+        shopId: user.shop_id,
+        branchId: user.branch_id,
+        role: user.role,
+        fullName: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        status: user.status,
+        isVerified: user.is_verified,
+      },
+      ipAddress: null,
+      userAgent: null,
+    });
+
     const emailDispatched = await this.sendVerificationEmailByToken(
       user,
       verificationToken,
@@ -551,6 +628,34 @@ export class AuthService {
     return result.rows[0] ?? null;
   }
 
+  private async shopExists(id: string) {
+    const result = await this.databaseService.query<{ id: string }>(
+      `
+      SELECT id
+      FROM phar_shops
+      WHERE id = $1::uuid AND is_delete = FALSE
+      LIMIT 1
+      `,
+      [id],
+    );
+
+    return Boolean(result.rows[0]);
+  }
+
+  private async findBranchById(id: string) {
+    const result = await this.databaseService.query<BranchLookupRow>(
+      `
+      SELECT id, shop_id
+      FROM phar_branches
+      WHERE id = $1::uuid AND is_delete = FALSE
+      LIMIT 1
+      `,
+      [id],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   private async findUserById(id: string) {
     const result = await this.databaseService.query<UserRow>(
       `
@@ -663,6 +768,57 @@ export class AuthService {
     if (!value) return false;
     const normalized = value.trim().toLowerCase();
     return normalized === 'true' || normalized === '1' || normalized === 'yes';
+  }
+
+  private getPgErrorCode(error: unknown) {
+    if (typeof error !== 'object' || error === null) return null;
+    if (!('code' in error)) return null;
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : null;
+  }
+
+  private async createAuditLog(input: AuditLogInput) {
+    try {
+      await this.databaseService.query(
+        `
+        INSERT INTO phar_audit_logs (
+          user_id,
+          action,
+          entity_type,
+          entity_id,
+          old_values,
+          new_values,
+          ip_address,
+          user_agent
+        )
+        VALUES (
+          $1::uuid,
+          $2,
+          $3,
+          $4::uuid,
+          $5::jsonb,
+          $6::jsonb,
+          $7,
+          $8
+        )
+        `,
+        [
+          input.userId,
+          input.action,
+          input.entityType,
+          input.entityId,
+          input.oldValues,
+          input.newValues,
+          input.ipAddress,
+          input.userAgent,
+        ],
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to write audit log for action "${input.action}"`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   private escapeHtml(value: string) {

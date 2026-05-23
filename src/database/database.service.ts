@@ -1,12 +1,16 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Pool, QueryResult, QueryResultRow } from 'pg';
+import { normalizeDatabaseUrl } from './normalize-database-url';
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor() {
-    const connectionString = process.env.DATABASE_URL;
+    const rawConnectionString = process.env.DATABASE_URL;
+    const connectionString = rawConnectionString
+      ? normalizeDatabaseUrl(rawConnectionString)
+      : '';
     if (!connectionString) {
       throw new Error('DATABASE_URL is not configured');
     }

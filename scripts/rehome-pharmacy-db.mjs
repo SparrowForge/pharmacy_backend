@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { normalizeDatabaseUrl } from './lib/normalize-database-url.mjs';
 
 const { Client } = pg;
 
@@ -160,7 +161,8 @@ async function verifyDatabase(connectionString) {
 async function run() {
   loadEnvFile(envPath);
 
-  const databaseUrl = process.env.DATABASE_URL;
+  const rawDatabaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = rawDatabaseUrl ? normalizeDatabaseUrl(rawDatabaseUrl) : '';
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is missing from environment/backend/.env');
   }
