@@ -440,12 +440,19 @@ export class AuthService {
       [code, ttlMinutes, user.id],
     );
 
+    const emailDispatched = await this.sendPasswordResetCodeEmail(
+      user,
+      code,
+      ttlMinutes,
+    );
+
     const response: Record<string, unknown> = {
       message: 'If that email exists, a reset code has been sent.',
     };
 
     if (this.exposeInternalTokens) {
       response.resetCode = code;
+      response.emailDispatched = emailDispatched;
     }
 
     return response;
@@ -530,15 +537,16 @@ export class AuthService {
       return this.smtpTransporter;
     }
 
+    const resolvedPass = this.resolveSmtpPassword();
     if (
       !this.smtpHost ||
       !Number.isFinite(this.smtpPort) ||
       !this.smtpUser ||
-      !this.smtpPass
+      !resolvedPass
     ) {
       this.smtpTransporter = null;
       this.logger.warn(
-        'SMTP is not fully configured. Verification emails will not be sent.',
+        'SMTP is not fully configured. Outgoing emails will not be sent.',
       );
       return this.smtpTransporter;
     }
@@ -549,7 +557,7 @@ export class AuthService {
       secure: this.smtpSecure,
       auth: {
         user: this.smtpUser,
-        pass: this.smtpPass,
+        pass: resolvedPass,
       },
     });
 
@@ -561,7 +569,11 @@ export class AuthService {
     return `${baseUrl}/verify?verify_token=${encodeURIComponent(token)}`;
   }
 
-  private renderVerificationEmailHtml(fullName: string, verificationLink: string) {
+  private renderVerificationEmailHtml(
+    fullName: string,
+    verificationLink: string,
+    token: string,
+  ) {
     return `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
         <h2 style="margin: 0 0 12px;">Verify Your Email</h2>
@@ -579,6 +591,33 @@ export class AuthService {
           If the button does not work, use this link:
           <br />
           <a href="${verificationLink}">${verificationLink}</a>
+        </p>
+        <p style="margin: 12px 0 0; font-size: 13px; color: #4b5563;">
+          Verification token:
+          <br />
+          <code style="word-break: break-all;">${this.escapeHtml(token)}</code>
+        </p>
+      </div>
+    `;
+  }
+
+  private renderPasswordResetCodeEmailHtml(
+    fullName: string,
+    code: string,
+    ttlMinutes: number,
+  ) {
+    return `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+        <h2 style="margin: 0 0 12px;">Password Reset Code</h2>
+        <p style="margin: 0 0 12px;">Hi ${this.escapeHtml(fullName)},</p>
+        <p style="margin: 0 0 12px;">
+          Use the verification code below to reset your password.
+        </p>
+        <p style="margin: 0 0 16px; font-size: 26px; font-weight: 700; letter-spacing: 4px;">
+          ${this.escapeHtml(code)}
+        </p>
+        <p style="margin: 0; font-size: 13px; color: #4b5563;">
+          This code will expire in ${ttlMinutes} minutes.
         </p>
       </div>
     `;
@@ -601,8 +640,12 @@ export class AuthService {
           : this.fromEmail,
         to: user.email,
         subject,
-        html: this.renderVerificationEmailHtml(recipientName, verificationLink),
-        text: `Verify your email: ${verificationLink}`,
+        html: this.renderVerificationEmailHtml(
+          recipientName,
+          verificationLink,
+          token,
+        ),
+        text: `Verify your email: ${verificationLink}\nVerification token: ${token}`,
       });
       return true;
     } catch (error) {
@@ -612,6 +655,59 @@ export class AuthService {
       );
       return false;
     }
+  }
+
+  private async sendPasswordResetCodeEmail(
+    user: UserRow,
+    code: string,
+    ttlMinutes: number,
+  ) {
+    const transporter = this.getSmtpTransporter();
+    if (!transporter || !this.fromEmail) {
+      return false;
+    }
+
+    const recipientName = user.full_name?.trim() || 'User';
+    const subject = 'Your password reset code';
+
+    try {
+      await transporter.sendMail({
+        from: this.fromName
+          ? `"${this.fromName}" <${this.fromEmail}>`
+          : this.fromEmail,
+        to: user.email,
+        subject,
+        html: this.renderPasswordResetCodeEmailHtml(
+          recipientName,
+          code,
+          ttlMinutes,
+        ),
+        text: `Your password reset code is ${code}. It expires in ${ttlMinutes} minutes.`,
+      });
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Failed to send password reset code to ${user.email}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return false;
+    }
+  }
+
+  private resolveSmtpPassword() {
+    const pass = this.smtpPass;
+    if (!pass) return '';
+
+    const host = this.smtpHost.toLowerCase();
+    if (host.includes('gmail') && /\s/.test(pass)) {
+      const compactPass = pass.replace(/\s+/g, '');
+      this.logger.warn(
+        'SMTP_PASS contains whitespace. Stripping spaces for Gmail app password.',
+      );
+      return compactPass;
+    }
+
+    return pass;
   }
 
   private async findUserByEmail(email: string) {
