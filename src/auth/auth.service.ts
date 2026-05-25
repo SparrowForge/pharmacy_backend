@@ -215,7 +215,10 @@ export class AuthService {
 
     if (this.exposeInternalTokens) {
       response.verificationToken = verificationToken;
-      response.verificationLink = this.buildVerificationLink(verificationToken);
+      response.verificationLink = this.buildVerificationLink(
+        verificationToken,
+        user.email,
+      );
     }
 
     return response;
@@ -407,7 +410,10 @@ export class AuthService {
 
     if (this.exposeInternalTokens) {
       response.verificationToken = verificationToken;
-      response.verificationLink = this.buildVerificationLink(verificationToken);
+      response.verificationLink = this.buildVerificationLink(
+        verificationToken,
+        user.email,
+      );
     }
 
     return response;
@@ -564,9 +570,9 @@ export class AuthService {
     return this.smtpTransporter;
   }
 
-  private buildVerificationLink(token: string) {
+  private buildVerificationLink(token: string, email: string) {
     const baseUrl = this.verificationBaseUrl.replace(/\/+$/, '');
-    return `${baseUrl}/verify?verify_token=${encodeURIComponent(token)}`;
+    return `${baseUrl}/verify?verify_token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
   }
 
   private renderVerificationEmailHtml(
@@ -629,7 +635,7 @@ export class AuthService {
       return false;
     }
 
-    const verificationLink = this.buildVerificationLink(token);
+    const verificationLink = this.buildVerificationLink(token, user.email);
     const recipientName = user.full_name?.trim() || 'User';
     const subject = 'Verify your email address';
 
