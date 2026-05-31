@@ -3,6 +3,7 @@ import { PoolClient, QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { AddPurchaseOrderItemDto } from './dto/add-purchase-order-item.dto';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
+import { CreatePurchaseReturnDto } from './dto/create-purchase-return.dto';
 import { ListPurchaseOrdersQueryDto } from './dto/list-purchase-orders-query.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto';
@@ -57,6 +58,7 @@ type ProductUnitContextRow = QueryResultRow & {
   id: string;
   unit_id: string | null;
   default_unit_id: string | null;
+  current_stock: number;
 };
 
 type UnitRow = QueryResultRow & {
@@ -589,6 +591,262 @@ export class PurchaseService {
     });
   }
 
+  async processReturn(orderId: string, dto: CreatePurchaseReturnDto, processedBy?: string) {
+    return this.databaseService.withTransaction(async (client) => {
+      const order = await this.ensureOrderExists(client, orderId);
+      const returnStatus = dto.status ?? 'completed';
+
+      if (returnStatus !== 'completed') {
+        throw new BadRequestException(
+          'status must be "completed" when processing a purchase return',
+        );
+      }
+
+      const returnNumber = dto.return_number?.trim() || (await this.generateReturnNumber(client));
+      const returnResult = await client.query<{ id: string }>(
+        `
+        INSERT INTO phar_purchase_returns (
+          return_number,
+          purchase_order_id,
+          supplier_id,
+          shop_id,
+          branch_id,
+          status,
+          total_amount,
+          reason,
+          notes,
+          created_by,
+          processed_by,
+          processed_at
+        ) VALUES (
+          $1,
+          $2::uuid,
+          $3::uuid,
+          $4::uuid,
+          $5::uuid,
+          $6,
+          0,
+          $7,
+          $8,
+          $9::uuid,
+          $10::uuid,
+          $11::timestamptz
+        )
+        RETURNING id
+        `,
+        [
+          returnNumber,
+          orderId,
+          order.supplier_id,
+          order.shop_id ?? null,
+          order.branch_id ?? null,
+          returnStatus,
+          dto.reason ?? null,
+          dto.notes ?? null,
+          processedBy ?? null,
+          processedBy ?? null,
+          new Date().toISOString(),
+        ],
+      );
+
+      const purchaseReturnId = returnResult.rows[0].id;
+      let totalAmount = 0;
+
+      for (const itemDto of dto.items) {
+        const poItem = await this.getOrderItemById(
+          client,
+          orderId,
+          itemDto.purchase_order_item_id,
+          true,
+        );
+
+        const product = await this.getProductUnitContext(client, poItem.product_id, true);
+        if (!product.unit_id) {
+          throw new BadRequestException(`Product "${poItem.product_id}" has no stock unit_id`);
+        }
+
+        const returnQty = this.ensurePositive(itemDto.return_qty, 'return_qty');
+        const returnUnitId =
+          itemDto.return_unit_id ?? poItem.purchase_unit_id ?? product.default_unit_id ?? product.unit_id;
+        const convertRate = await this.resolveConvertRate(
+          client,
+          product.unit_id,
+          returnUnitId,
+          'return',
+        );
+        const stockReturnQty = this.toStockQuantity(returnQty, convertRate);
+
+        if ((product.current_stock ?? 0) < stockReturnQty) {
+          throw new BadRequestException(
+            `Insufficient stock for product "${poItem.product_id}". Required ${stockReturnQty}, available ${product.current_stock ?? 0}`,
+          );
+        }
+
+        const returnBatchId = itemDto.product_batch_id ?? poItem.product_batch_id ?? null;
+        if (returnBatchId) {
+          const batchResult = await client.query<{ id: string; quantity_on_hand: number }>(
+            `
+            SELECT id, quantity_on_hand
+            FROM phar_product_batches
+            WHERE id = $1::uuid
+              AND product_id = $2::uuid
+            FOR UPDATE
+            LIMIT 1
+            `,
+            [returnBatchId, poItem.product_id],
+          );
+
+          const batch = batchResult.rows[0];
+          if (!batch) {
+            throw new NotFoundException(
+              `Product batch "${returnBatchId}" not found for product "${poItem.product_id}"`,
+            );
+          }
+
+          if ((batch.quantity_on_hand ?? 0) < stockReturnQty) {
+            throw new BadRequestException(
+              `Insufficient batch stock for batch "${returnBatchId}". Required ${stockReturnQty}, available ${batch.quantity_on_hand ?? 0}`,
+            );
+          }
+
+          await client.query(
+            `
+            UPDATE phar_product_batches
+            SET quantity_on_hand = quantity_on_hand - $1
+            WHERE id = $2::uuid
+            `,
+            [stockReturnQty, returnBatchId],
+          );
+        }
+
+        const unitCost =
+          itemDto.unit_cost !== undefined
+            ? this.ensureNonNegative(itemDto.unit_cost, 'unit_cost')
+            : this.toNumber(poItem.unit_cost);
+        const lineTotal = this.roundMoney(returnQty * unitCost);
+        totalAmount += lineTotal;
+
+        await client.query(
+          `
+          INSERT INTO phar_purchase_return_items (
+            purchase_return_id,
+            product_id,
+            product_batch_id,
+            return_unit_id,
+            return_qty,
+            qty_return_stock,
+            converted_rate_used,
+            quantity,
+            unit_cost,
+            line_total,
+            reason
+          ) VALUES (
+            $1::uuid,
+            $2::uuid,
+            $3::uuid,
+            $4::uuid,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11
+          )
+          `,
+          [
+            purchaseReturnId,
+            poItem.product_id,
+            returnBatchId,
+            returnUnitId,
+            returnQty,
+            stockReturnQty,
+            convertRate,
+            stockReturnQty,
+            unitCost,
+            lineTotal,
+            itemDto.reason ?? null,
+          ],
+        );
+
+        await client.query(
+          `
+          UPDATE phar_products
+          SET current_stock = current_stock - $1
+          WHERE id = $2::uuid
+          `,
+          [stockReturnQty, poItem.product_id],
+        );
+
+        await client.query(
+          `
+          INSERT INTO phar_stock_movements (
+            shop_id,
+            branch_id,
+            product_id,
+            product_batch_id,
+            movement_type,
+            reference_type,
+            reference_id,
+            quantity,
+            unit_cost,
+            notes,
+            created_by
+          ) VALUES (
+            $1::uuid,
+            $2::uuid,
+            $3::uuid,
+            $4::uuid,
+            'purchase_return',
+            'purchase_return',
+            $5::uuid,
+            $6,
+            $7,
+            $8,
+            $9::uuid
+          )
+          `,
+          [
+            order.shop_id ?? null,
+            order.branch_id ?? null,
+            poItem.product_id,
+            returnBatchId,
+            purchaseReturnId,
+            -stockReturnQty,
+            unitCost,
+            itemDto.reason ?? dto.notes ?? null,
+            processedBy ?? null,
+          ],
+        );
+      }
+
+      await client.query(
+        `
+        UPDATE phar_purchase_returns
+        SET total_amount = $1
+        WHERE id = $2::uuid
+        `,
+        [this.roundMoney(totalAmount), purchaseReturnId],
+      );
+
+      const purchaseReturnResult = await client.query(
+        `
+        SELECT *
+        FROM phar_purchase_returns
+        WHERE id = $1::uuid
+        LIMIT 1
+        `,
+        [purchaseReturnId],
+      );
+
+      return {
+        message: 'Purchase return processed successfully',
+        purchase_return: purchaseReturnResult.rows[0],
+        order: await this.getById(orderId),
+      };
+    });
+  }
+
   private async insertOrderItem(
     client: PoolClient,
     orderId: string,
@@ -695,6 +953,7 @@ export class PurchaseService {
     client: PoolClient,
     stockUnitId: string,
     purchaseUnitId: string,
+    unitLabel: 'purchase' | 'return' = 'purchase',
   ) {
     if (stockUnitId === purchaseUnitId) {
       return 1;
@@ -712,13 +971,15 @@ export class PurchaseService {
 
     const unit = unitResult.rows[0];
     if (!unit) {
-      throw new NotFoundException(`Purchase unit not found for id "${purchaseUnitId}"`);
+      throw new NotFoundException(
+        `${unitLabel === 'return' ? 'Return' : 'Purchase'} unit not found for id "${purchaseUnitId}"`,
+      );
     }
 
     const convertRate = this.toNumber(unit.convert_rate);
     if (!(convertRate > 0)) {
       throw new BadRequestException(
-        `convert_rate is required and must be > 0 for purchase unit "${purchaseUnitId}"`,
+        `convert_rate is required and must be > 0 for ${unitLabel} unit "${purchaseUnitId}"`,
       );
     }
 
@@ -912,12 +1173,17 @@ export class PurchaseService {
     return row;
   }
 
-  private async getProductUnitContext(client: PoolClient, productId: string) {
+  private async getProductUnitContext(
+    client: PoolClient,
+    productId: string,
+    forUpdate = false,
+  ) {
     const productResult = await client.query<ProductUnitContextRow>(
       `
-      SELECT id, unit_id, default_unit_id
+      SELECT id, unit_id, default_unit_id, current_stock
       FROM phar_products
       WHERE id = $1::uuid
+      ${forUpdate ? 'FOR UPDATE' : ''}
       LIMIT 1
       `,
       [productId],
@@ -982,6 +1248,33 @@ export class PurchaseService {
     }
 
     throw new BadRequestException('Failed to generate unique purchase receipt number');
+  }
+
+  private async generateReturnNumber(client: PoolClient) {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, '0');
+      const candidate = `RET-${timestamp}-${random}`;
+
+      const exists = await client.query<{ exists: boolean }>(
+        `
+        SELECT EXISTS (
+          SELECT 1
+          FROM phar_purchase_returns
+          WHERE return_number = $1
+        ) AS exists
+        `,
+        [candidate],
+      );
+
+      if (!exists.rows[0]?.exists) {
+        return candidate;
+      }
+    }
+
+    throw new BadRequestException('Failed to generate unique purchase return number');
   }
 
   private ensurePositive(value: number, field: string) {

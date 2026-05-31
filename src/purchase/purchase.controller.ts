@@ -14,6 +14,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AddPurchaseOrderItemDto } from './dto/add-purchase-order-item.dto';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
+import { CreatePurchaseReturnDto } from './dto/create-purchase-return.dto';
 import { ListPurchaseOrdersQueryDto } from './dto/list-purchase-orders-query.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto';
@@ -94,5 +95,15 @@ export class PurchaseController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.purchaseService.receive(id, dto, req.user?.sub);
+  }
+
+  @Post(':id/return')
+  @ApiOperation({ summary: 'Process purchase return and deduct stock' })
+  returnOrder(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: CreatePurchaseReturnDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.purchaseService.processReturn(id, dto, req.user?.sub);
   }
 }
