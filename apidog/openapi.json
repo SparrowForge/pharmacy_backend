@@ -7339,6 +7339,305 @@
           "PurchaseOrders"
         ]
       }
+    },
+    "/api/v1/sales_invoices": {
+      "get": {
+        "operationId": "SalesController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text search across string columns",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "Return soft-deleted records too (true/false)",
+            "schema": {
+              "default": false,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "completed",
+                "pending",
+                "cancelled",
+                "returned"
+              ]
+            }
+          },
+          {
+            "name": "customer_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List sales invoices",
+        "tags": [
+          "SalesInvoices"
+        ]
+      },
+      "post": {
+        "operationId": "SalesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSalesInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create sales invoice with items",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
+    },
+    "/api/v1/sales_invoices/{id}": {
+      "get": {
+        "operationId": "SalesController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get sales invoice details by id",
+        "tags": [
+          "SalesInvoices"
+        ]
+      },
+      "patch": {
+        "operationId": "SalesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSalesInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update sales invoice header by id",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
+    },
+    "/api/v1/sales_invoices/{id}/items": {
+      "post": {
+        "operationId": "SalesController_addItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSalesInvoiceItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Add item to sales invoice",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
+    },
+    "/api/v1/sales_invoices/{id}/items/{itemId}": {
+      "patch": {
+        "operationId": "SalesController_updateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSalesInvoiceItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update sales invoice item",
+        "tags": [
+          "SalesInvoices"
+        ]
+      },
+      "delete": {
+        "operationId": "SalesController_removeItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete sales invoice item",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
+    },
+    "/api/v1/sales_invoices/{id}/complete": {
+      "post": {
+        "operationId": "SalesController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSalesInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Complete sales invoice and deduct stock",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
     }
   },
   "info": {
@@ -10005,6 +10304,252 @@
         "required": [
           "items"
         ]
+      },
+      "CreateSalesInvoiceItemDto": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sales_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sales_qty": {
+            "type": "number",
+            "description": "Quantity in sales unit"
+          },
+          "unit_price": {
+            "type": "number",
+            "description": "Price per sales unit"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "product_id",
+          "sales_qty",
+          "unit_price"
+        ]
+      },
+      "CreateSalesInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "customer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shop_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "completed",
+              "pending",
+              "cancelled",
+              "returned"
+            ]
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "credit",
+              "mobile",
+              "bank_transfer",
+              "check",
+              "other"
+            ]
+          },
+          "discount_amount": {
+            "type": "number"
+          },
+          "tax_amount": {
+            "type": "number"
+          },
+          "paid_amount": {
+            "type": "number"
+          },
+          "invoice_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateSalesInvoiceItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "UpdateSalesInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "invoice_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "customer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shop_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "completed",
+              "pending",
+              "cancelled",
+              "returned"
+            ]
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "credit",
+              "mobile",
+              "bank_transfer",
+              "check",
+              "other"
+            ]
+          },
+          "discount_amount": {
+            "type": "number"
+          },
+          "tax_amount": {
+            "type": "number"
+          },
+          "paid_amount": {
+            "type": "number"
+          },
+          "invoice_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "AddSalesInvoiceItemDto": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sales_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sales_qty": {
+            "type": "number",
+            "description": "Quantity in sales unit"
+          },
+          "unit_price": {
+            "type": "number",
+            "description": "Price per sales unit"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "product_id",
+          "sales_qty",
+          "unit_price"
+        ]
+      },
+      "UpdateSalesInvoiceItemDto": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sales_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sales_qty": {
+            "type": "number",
+            "description": "Quantity in sales unit"
+          },
+          "unit_price": {
+            "type": "number",
+            "description": "Price per sales unit"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          }
+        }
+      },
+      "CompleteSalesInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "paid_amount": {
+            "type": "number",
+            "description": "Override paid amount before completion"
+          },
+          "invoice_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
       }
     }
   },
