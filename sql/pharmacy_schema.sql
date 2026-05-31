@@ -167,6 +167,14 @@ CREATE TYPE phar_address_type AS ENUM (
   'other'
 );
 
+CREATE TYPE phar_product_unit_type AS ENUM (
+  'Weight',
+  'Height',
+  'Volume',
+  'Area',
+  'Pieaces'
+);
+
 -- =====================================================================
 -- LOCATION TABLES
 -- =====================================================================
@@ -458,6 +466,9 @@ CREATE TABLE phar_product_units (
   name TEXT NOT NULL UNIQUE,
   short_name VARCHAR(30) NOT NULL UNIQUE,
   description TEXT,
+  unit_type phar_product_unit_type NOT NULL DEFAULT 'Pieaces',
+  is_deafult_unit BOOLEAN NOT NULL DEFAULT FALSE,
+  convert_rate NUMERIC(18,8),
   is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -477,6 +488,7 @@ CREATE TABLE phar_products (
   brand_id UUID REFERENCES phar_product_brands(id),
   category_id UUID REFERENCES phar_product_categories(id),
   unit_id UUID REFERENCES phar_product_units(id),
+  default_unit_id UUID REFERENCES phar_product_units(id),
   supplier_id UUID REFERENCES phar_companies(id),
   manufacturer_id UUID REFERENCES phar_companies(id),
   distributor_id UUID REFERENCES phar_companies(id),
@@ -674,8 +686,14 @@ CREATE TABLE phar_purchase_order_items (
   purchase_order_id UUID NOT NULL REFERENCES phar_purchase_orders(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES phar_products(id),
   product_batch_id UUID REFERENCES phar_product_batches(id),
+  purchase_unit_id UUID REFERENCES phar_product_units(id),
+  quantity_purchase NUMERIC(18,6) NOT NULL DEFAULT 0,
+  quantity_stock INT NOT NULL DEFAULT 0,
   quantity INT NOT NULL DEFAULT 0,
+  quantity_received_purchase NUMERIC(18,6) NOT NULL DEFAULT 0,
+  quantity_received_stock INT NOT NULL DEFAULT 0,
   quantity_received INT NOT NULL DEFAULT 0,
+  convert_rate_used NUMERIC(18,8) NOT NULL DEFAULT 1,
   unit_cost NUMERIC(14,4) NOT NULL DEFAULT 0,
   discount NUMERIC(14,4) DEFAULT 0,
   tax NUMERIC(14,4) DEFAULT 0,
@@ -708,7 +726,11 @@ CREATE TABLE phar_purchase_receipt_items (
   purchase_order_item_id UUID REFERENCES phar_purchase_order_items(id),
   product_id UUID NOT NULL REFERENCES phar_products(id),
   product_batch_id UUID REFERENCES phar_product_batches(id),
+  purchase_unit_id UUID REFERENCES phar_product_units(id),
+  quantity_received_purchase NUMERIC(18,6) NOT NULL DEFAULT 0,
+  quantity_received_stock INT NOT NULL DEFAULT 0,
   quantity_received INT NOT NULL DEFAULT 0,
+  convert_rate_used NUMERIC(18,8) NOT NULL DEFAULT 1,
   unit_cost NUMERIC(14,4) NOT NULL DEFAULT 0,
   expiry_date DATE,
   lot_number VARCHAR(80),
@@ -1261,13 +1283,13 @@ GROUP BY company_type;
 -- DEFAULT SEED DATA
 -- =====================================================================
 
-INSERT INTO phar_product_units (name, short_name, description) VALUES
-('Piece', 'pcs', 'Single piece'),
-('Strip', 'strip', 'Medicine strip'),
-('Box', 'box', 'Box package'),
-('Bottle', 'bottle', 'Bottle package'),
-('Tube', 'tube', 'Tube package'),
-('Packet', 'packet', 'Packet package')
+INSERT INTO phar_product_units (name, short_name, description, unit_type) VALUES
+('Piece', 'pcs', 'Single piece', 'Pieaces'),
+('Strip', 'strip', 'Medicine strip', 'Pieaces'),
+('Box', 'box', 'Box package', 'Pieaces'),
+('Bottle', 'bottle', 'Bottle package', 'Pieaces'),
+('Tube', 'tube', 'Tube package', 'Pieaces'),
+('Packet', 'packet', 'Packet package', 'Pieaces')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO phar_payment_methods (name, method_type, description) VALUES

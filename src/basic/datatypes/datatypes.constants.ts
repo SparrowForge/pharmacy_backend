@@ -8,6 +8,7 @@ export const PHAR_ENUM_DATATYPES = [
   'phar_payment_status',
   'phar_prescription_status',
   'phar_product_status',
+  'phar_product_unit_type',
   'phar_purchase_order_status',
   'phar_receipt_status',
   'phar_return_status',

@@ -117,6 +117,30 @@ export class DatatypesController {
     return this.getUnderscoreTypeValues('phar_product_status');
   }
 
+  @Get('product_unit_type')
+  @ApiOperation({ summary: 'Get phar_product_unit_type enum values' })
+  getPharProductUnitType() {
+    return this.getBaseTypeValues('phar_product_unit_type');
+  }
+
+  @Get('phar_product_unit_type')
+  @ApiOperation({ summary: 'Get phar_product_unit_type enum values (alias)' })
+  getPharProductUnitTypeAlias() {
+    return this.getBaseTypeValues('phar_product_unit_type');
+  }
+
+  @Get('_product_unit_type')
+  @ApiOperation({ summary: 'Get _phar_product_unit_type enum values' })
+  getUnderscorePharProductUnitType() {
+    return this.getUnderscoreTypeValues('phar_product_unit_type');
+  }
+
+  @Get('_phar_product_unit_type')
+  @ApiOperation({ summary: 'Get _phar_product_unit_type enum values (alias)' })
+  getUnderscorePharProductUnitTypeAlias() {
+    return this.getUnderscoreTypeValues('phar_product_unit_type');
+  }
+
   @Get('purchase_order_status')
   @ApiOperation({ summary: 'Get phar_purchase_order_status enum values' })
   getPharPurchaseOrderStatus() {

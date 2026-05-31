@@ -68,6 +68,11 @@ export class CreateProductDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
+  default_unit_id?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
   supplier_id?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })

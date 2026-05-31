@@ -14,6 +14,7 @@ const auth_module_1 = require("./auth/auth.module");
 const audits_module_1 = require("./audits/audits.module");
 const basic_tables_module_1 = require("./basic/basic-tables.module");
 const database_module_1 = require("./database/database.module");
+const purchase_module_1 = require("./purchase/purchase.module");
 const users_module_1 = require("./users/users.module");
 let AppModule = class AppModule {
 };
@@ -26,6 +27,7 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             audits_module_1.AuditsModule,
             basic_tables_module_1.BasicTablesModule,
+            purchase_module_1.PurchaseModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

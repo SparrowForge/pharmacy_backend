@@ -2189,7 +2189,7 @@
             "description": ""
           }
         },
-        "summary": "Get address_type enum values",
+        "summary": "Get phar_address_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2204,7 +2204,7 @@
             "description": ""
           }
         },
-        "summary": "Get _address_type enum values",
+        "summary": "Get _phar_address_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2219,7 +2219,7 @@
             "description": ""
           }
         },
-        "summary": "Get company_type enum values",
+        "summary": "Get phar_company_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2234,7 +2234,7 @@
             "description": ""
           }
         },
-        "summary": "Get _company_type enum values",
+        "summary": "Get _phar_company_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2249,7 +2249,7 @@
             "description": ""
           }
         },
-        "summary": "Get discount_type enum values",
+        "summary": "Get phar_discount_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2264,7 +2264,7 @@
             "description": ""
           }
         },
-        "summary": "Get _discount_type enum values",
+        "summary": "Get _phar_discount_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2279,7 +2279,7 @@
             "description": ""
           }
         },
-        "summary": "Get manufacturing_status enum values",
+        "summary": "Get phar_manufacturing_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2294,7 +2294,7 @@
             "description": ""
           }
         },
-        "summary": "Get _manufacturing_status enum values",
+        "summary": "Get _phar_manufacturing_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2309,7 +2309,7 @@
             "description": ""
           }
         },
-        "summary": "Get order_status enum values",
+        "summary": "Get phar_order_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2324,7 +2324,7 @@
             "description": ""
           }
         },
-        "summary": "Get _order_status enum values",
+        "summary": "Get _phar_order_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2339,7 +2339,7 @@
             "description": ""
           }
         },
-        "summary": "Get payment_method_type enum values",
+        "summary": "Get phar_payment_method_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2354,7 +2354,7 @@
             "description": ""
           }
         },
-        "summary": "Get _payment_method_type enum values",
+        "summary": "Get _phar_payment_method_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2369,7 +2369,7 @@
             "description": ""
           }
         },
-        "summary": "Get payment_status enum values",
+        "summary": "Get phar_payment_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2384,7 +2384,7 @@
             "description": ""
           }
         },
-        "summary": "Get _payment_status enum values",
+        "summary": "Get _phar_payment_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2399,7 +2399,7 @@
             "description": ""
           }
         },
-        "summary": "Get prescription_status enum values",
+        "summary": "Get phar_prescription_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2414,7 +2414,7 @@
             "description": ""
           }
         },
-        "summary": "Get _prescription_status enum values",
+        "summary": "Get _phar_prescription_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2429,7 +2429,7 @@
             "description": ""
           }
         },
-        "summary": "Get product_status enum values",
+        "summary": "Get phar_product_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2444,7 +2444,67 @@
             "description": ""
           }
         },
-        "summary": "Get _product_status enum values",
+        "summary": "Get _phar_product_status enum values",
+        "tags": [
+          "Datatypes"
+        ]
+      }
+    },
+    "/api/v1/datatypes/product_unit_type": {
+      "get": {
+        "operationId": "DatatypesController_getPharProductUnitType",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get phar_product_unit_type enum values",
+        "tags": [
+          "Datatypes"
+        ]
+      }
+    },
+    "/api/v1/datatypes/phar_product_unit_type": {
+      "get": {
+        "operationId": "DatatypesController_getPharProductUnitTypeAlias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get phar_product_unit_type enum values (alias)",
+        "tags": [
+          "Datatypes"
+        ]
+      }
+    },
+    "/api/v1/datatypes/_product_unit_type": {
+      "get": {
+        "operationId": "DatatypesController_getUnderscorePharProductUnitType",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get _phar_product_unit_type enum values",
+        "tags": [
+          "Datatypes"
+        ]
+      }
+    },
+    "/api/v1/datatypes/_phar_product_unit_type": {
+      "get": {
+        "operationId": "DatatypesController_getUnderscorePharProductUnitTypeAlias",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get _phar_product_unit_type enum values (alias)",
         "tags": [
           "Datatypes"
         ]
@@ -2459,7 +2519,7 @@
             "description": ""
           }
         },
-        "summary": "Get purchase_order_status enum values",
+        "summary": "Get phar_purchase_order_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2474,7 +2534,7 @@
             "description": ""
           }
         },
-        "summary": "Get _purchase_order_status enum values",
+        "summary": "Get _phar_purchase_order_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2489,7 +2549,7 @@
             "description": ""
           }
         },
-        "summary": "Get receipt_status enum values",
+        "summary": "Get phar_receipt_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2504,7 +2564,7 @@
             "description": ""
           }
         },
-        "summary": "Get _receipt_status enum values",
+        "summary": "Get _phar_receipt_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2519,7 +2579,7 @@
             "description": ""
           }
         },
-        "summary": "Get return_status enum values",
+        "summary": "Get phar_return_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2534,7 +2594,7 @@
             "description": ""
           }
         },
-        "summary": "Get _return_status enum values",
+        "summary": "Get _phar_return_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2549,7 +2609,7 @@
             "description": ""
           }
         },
-        "summary": "Get sales_status enum values",
+        "summary": "Get phar_sales_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2564,7 +2624,7 @@
             "description": ""
           }
         },
-        "summary": "Get _sales_status enum values",
+        "summary": "Get _phar_sales_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2579,7 +2639,7 @@
             "description": ""
           }
         },
-        "summary": "Get shop_plan enum values",
+        "summary": "Get phar_shop_plan enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2594,7 +2654,7 @@
             "description": ""
           }
         },
-        "summary": "Get _shop_plan enum values",
+        "summary": "Get _phar_shop_plan enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2609,7 +2669,7 @@
             "description": ""
           }
         },
-        "summary": "Get stock_movement_type enum values",
+        "summary": "Get phar_stock_movement_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2624,7 +2684,7 @@
             "description": ""
           }
         },
-        "summary": "Get _stock_movement_type enum values",
+        "summary": "Get _phar_stock_movement_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2639,7 +2699,7 @@
             "description": ""
           }
         },
-        "summary": "Get user_role enum values",
+        "summary": "Get phar_user_role enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2654,7 +2714,7 @@
             "description": ""
           }
         },
-        "summary": "Get _user_role enum values",
+        "summary": "Get _phar_user_role enum values",
         "tags": [
           "Datatypes"
         ]
@@ -6964,6 +7024,305 @@
           "Zones"
         ]
       }
+    },
+    "/api/v1/purchase_orders": {
+      "get": {
+        "operationId": "PurchaseController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text search across string columns",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "Return soft-deleted records too (true/false)",
+            "schema": {
+              "default": false,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "confirmed",
+                "received",
+                "partial",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "supplier_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List purchase orders",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      },
+      "post": {
+        "operationId": "PurchaseController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create purchase order with items",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/purchase_orders/{id}": {
+      "get": {
+        "operationId": "PurchaseController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get purchase order details by id",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      },
+      "patch": {
+        "operationId": "PurchaseController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update purchase order header by id",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/purchase_orders/{id}/items": {
+      "post": {
+        "operationId": "PurchaseController_addItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPurchaseOrderItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Add item to purchase order",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/purchase_orders/{id}/items/{itemId}": {
+      "patch": {
+        "operationId": "PurchaseController_updateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseOrderItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update purchase order item",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      },
+      "delete": {
+        "operationId": "PurchaseController_removeItem",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete purchase order item",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/purchase_orders/{id}/receive": {
+      "post": {
+        "operationId": "PurchaseController_receive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceivePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Receive purchase order items and update stock",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
     }
   },
   "info": {
@@ -8642,6 +9001,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "default_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "supplier_id": {
             "type": "string",
             "format": "uuid"
@@ -8783,6 +9146,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "default_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "supplier_id": {
             "type": "string",
             "format": "uuid"
@@ -8916,6 +9283,22 @@
           },
           "description": {
             "type": "string"
+          },
+          "unit_type": {
+            "type": "string",
+            "enum": [
+              "Weight",
+              "Height",
+              "Volume",
+              "Area",
+              "Pieaces"
+            ]
+          },
+          "is_deafult_unit": {
+            "type": "boolean"
+          },
+          "convert_rate": {
+            "type": "number"
           }
         },
         "required": [
@@ -8935,6 +9318,22 @@
           },
           "description": {
             "type": "string"
+          },
+          "unit_type": {
+            "type": "string",
+            "enum": [
+              "Weight",
+              "Height",
+              "Volume",
+              "Area",
+              "Pieaces"
+            ]
+          },
+          "is_deafult_unit": {
+            "type": "boolean"
+          },
+          "convert_rate": {
+            "type": "number"
           }
         }
       },
@@ -9262,6 +9661,334 @@
             "type": "string"
           }
         }
+      },
+      "CreatePurchaseOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purchase_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity_purchase": {
+            "type": "number",
+            "description": "Quantity in purchase unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per purchase unit"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          },
+          "expected_expiry_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "batch_number": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "product_id",
+          "quantity_purchase",
+          "unit_cost"
+        ]
+      },
+      "CreatePurchaseOrderDto": {
+        "type": "object",
+        "properties": {
+          "po_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shop_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "received",
+              "partial",
+              "cancelled"
+            ]
+          },
+          "phar_payment_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "partial",
+              "paid",
+              "failed",
+              "refunded",
+              "cancelled"
+            ]
+          },
+          "discount_amount": {
+            "type": "number"
+          },
+          "tax_amount": {
+            "type": "number"
+          },
+          "shipping_cost": {
+            "type": "number"
+          },
+          "expected_delivery_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "delivery_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePurchaseOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "supplier_id",
+          "items"
+        ]
+      },
+      "UpdatePurchaseOrderDto": {
+        "type": "object",
+        "properties": {
+          "po_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "supplier_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shop_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "received",
+              "partial",
+              "cancelled"
+            ]
+          },
+          "phar_payment_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "partial",
+              "paid",
+              "failed",
+              "refunded",
+              "cancelled"
+            ]
+          },
+          "discount_amount": {
+            "type": "number"
+          },
+          "tax_amount": {
+            "type": "number"
+          },
+          "shipping_cost": {
+            "type": "number"
+          },
+          "expected_delivery_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "delivery_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "AddPurchaseOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purchase_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity_purchase": {
+            "type": "number",
+            "description": "Quantity in purchase unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per purchase unit"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          },
+          "expected_expiry_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "batch_number": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "product_id",
+          "quantity_purchase",
+          "unit_cost"
+        ]
+      },
+      "UpdatePurchaseOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purchase_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity_purchase": {
+            "type": "number",
+            "description": "Quantity in purchase unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per purchase unit"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          },
+          "expected_expiry_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "batch_number": {
+            "type": "string",
+            "maxLength": 80
+          }
+        }
+      },
+      "ReceivePurchaseOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "purchase_order_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity_purchase": {
+            "type": "number",
+            "description": "Received quantity in purchase unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per purchase unit override"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "lot_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "purchase_order_item_id",
+          "quantity_purchase"
+        ]
+      },
+      "ReceivePurchaseOrderDto": {
+        "type": "object",
+        "properties": {
+          "receipt_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "received",
+              "partial",
+              "cancelled"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceivePurchaseOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
       }
     }
   },

@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuditsModule } from './audits/audits.module';
 import { BasicTablesModule } from './basic/basic-tables.module';
 import { DatabaseModule } from './database/database.module';
+import { PurchaseModule } from './purchase/purchase.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuditsModule,
     BasicTablesModule,
+    PurchaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
