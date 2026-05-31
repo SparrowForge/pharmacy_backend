@@ -18,7 +18,12 @@ export class BasicCrudService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async list(entity: string, table: string, query: ListBasicQueryDto) {
+  async list(
+    entity: string,
+    table: string,
+    query: ListBasicQueryDto,
+    exactFilters?: Record<string, unknown>,
+  ) {
     const columns = await this.getColumns(table);
 
     const page = query.page ?? 1;
@@ -51,6 +56,24 @@ export class BasicCrudService {
           qCondition.push(`${this.quoteIdent(columnName)} ILIKE $${params.length}`);
         }
         where.push(`(${qCondition.join(' OR ')})`);
+      }
+    }
+
+    if (exactFilters) {
+      for (const [columnName, rawValue] of Object.entries(exactFilters)) {
+        const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+        if (value === undefined || value === null || value === '') {
+          continue;
+        }
+
+        if (!this.hasColumn(columns, columnName)) {
+          throw new BadRequestException(
+            `Invalid filter field "${columnName}" for entity "${entity}"`,
+          );
+        }
+
+        params.push(value);
+        where.push(`${this.quoteIdent(columnName)} = $${params.length}`);
       }
     }
 

@@ -807,6 +807,9 @@ CREATE TABLE phar_sales_invoice_items (
   sales_invoice_id UUID NOT NULL REFERENCES phar_sales_invoices(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES phar_products(id),
   product_batch_id UUID REFERENCES phar_product_batches(id),
+  sales_unit_id UUID REFERENCES phar_product_units(id),
+  sales_qty NUMERIC(18,6) NOT NULL DEFAULT 0,
+  stock_sales_qty INT NOT NULL DEFAULT 0,
   quantity INT NOT NULL DEFAULT 0,
   unit_price NUMERIC(14,4) NOT NULL DEFAULT 0,
   discount NUMERIC(14,4) DEFAULT 0,
@@ -1249,7 +1252,7 @@ SELECT
   p.id AS product_id,
   p.name AS product_name,
   COUNT(sii.id) AS total_sold_lines,
-  SUM(sii.quantity) AS units_sold,
+  SUM(CASE WHEN sii.stock_sales_qty > 0 THEN sii.stock_sales_qty ELSE sii.quantity END) AS units_sold,
   SUM(sii.line_total) AS revenue,
   AVG(sii.unit_price) AS avg_price
 FROM phar_sales_invoice_items sii

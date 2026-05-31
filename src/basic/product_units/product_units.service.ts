@@ -12,7 +12,17 @@ export class ProductUnitsService {
   constructor(private readonly basicCrudService: BasicCrudService) {}
 
   list(query: ListProductUnitsQueryDto) {
-    return this.basicCrudService.list(this.entity, this.table, query);
+    const exactFilters: Record<string, unknown> = {};
+    if (query.unit_type) {
+      exactFilters.unit_type = query.unit_type;
+    }
+
+    return this.basicCrudService.list(
+      this.entity,
+      this.table,
+      query,
+      exactFilters,
+    );
   }
 
   getById(id: string) {

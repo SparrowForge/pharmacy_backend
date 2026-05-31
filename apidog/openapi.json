@@ -5633,6 +5633,22 @@
               "default": false,
               "type": "string"
             }
+          },
+          {
+            "name": "unit_type",
+            "required": false,
+            "in": "query",
+            "description": "Filter by exact unit type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Weight",
+                "Height",
+                "Volume",
+                "Area",
+                "Pieaces"
+              ]
+            }
           }
         ],
         "responses": {
