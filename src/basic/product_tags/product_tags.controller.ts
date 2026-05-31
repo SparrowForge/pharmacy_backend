@@ -26,6 +26,12 @@ export class ProductTagsController {
     return this.productTagsService.list(query);
   }
 
+  @Get('unique')
+  @ApiOperation({ summary: 'Get unique product tags' })
+  getUniqueTags() {
+    return this.productTagsService.getUniqueTags();
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create product_tag' })
   create(@Body() dto: CreateProductTagDto) {
