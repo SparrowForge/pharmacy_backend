@@ -1,4 +1,14 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateProductBadgeDto } from './create-product-badge.dto';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
-export class UpdateProductBadgeDto extends PartialType(CreateProductBadgeDto) {}
+export class UpdateProductBadgeDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  product_id?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  badge?: string;
+}

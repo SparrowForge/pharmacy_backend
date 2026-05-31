@@ -4029,6 +4029,21 @@
         ]
       }
     },
+    "/api/v1/product_badges/unique": {
+      "get": {
+        "operationId": "ProductBadgesController_getUniqueBadges",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get unique product badges",
+        "tags": [
+          "ProductBadges"
+        ]
+      }
+    },
     "/api/v1/product_badges/{id}": {
       "get": {
         "operationId": "ProductBadgesController_getById",
@@ -7638,6 +7653,55 @@
           "SalesInvoices"
         ]
       }
+    },
+    "/api/v1/purchase_orders/{id}/return": {
+      "post": {
+        "operationId": "PurchaseController_returnOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Process purchase return and deduct stock",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/product_tags/unique": {
+      "get": {
+        "operationId": "ProductTagsController_getUniqueTags",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get unique product tags",
+        "tags": [
+          "ProductTags"
+        ]
+      }
     }
   },
   "info": {
@@ -8934,7 +8998,14 @@
             "format": "uuid"
           },
           "badge": {
-            "type": "string"
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "featured",
+              "hot-deal"
+            ]
           }
         },
         "required": [
@@ -9566,7 +9637,14 @@
             "format": "uuid"
           },
           "tag": {
-            "type": "string"
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "perferendis",
+              "parasitamal"
+            ]
           }
         },
         "required": [
@@ -10550,6 +10628,72 @@
             "type": "string"
           }
         }
+      },
+      "CreatePurchaseReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "purchase_order_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "return_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "return_qty": {
+            "type": "number",
+            "description": "Return quantity in return unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per return unit override"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_order_item_id",
+          "return_qty"
+        ]
+      },
+      "CreatePurchaseReturnDto": {
+        "type": "object",
+        "properties": {
+          "return_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePurchaseReturnItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
       }
     }
   },

@@ -26,6 +26,12 @@ export class ProductBadgesController {
     return this.productBadgesService.list(query);
   }
 
+  @Get('unique')
+  @ApiOperation({ summary: 'Get unique product badges' })
+  getUniqueBadges() {
+    return this.productBadgesService.getUniqueBadges();
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create product_badge' })
   create(@Body() dto: CreateProductBadgeDto) {
