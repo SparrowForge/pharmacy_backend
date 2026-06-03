@@ -145,7 +145,7 @@ export class PurchaseService {
       page,
       limit,
       total: countResult.rows[0]?.total ?? 0,
-      data: dataResult.rows,
+      data: dataResult.rows.map((row) => this.normalizePurchaseOrder(row)),
     };
   }
 
@@ -1118,7 +1118,18 @@ export class PurchaseService {
     if (!order) {
       throw new NotFoundException(`Purchase order not found for id "${id}"`);
     }
-    return order;
+    return this.normalizePurchaseOrder(order);
+  }
+
+  private normalizePurchaseOrder(order: PurchaseOrderRow) {
+    return {
+      ...order,
+      subtotal: this.toNumber(order.subtotal),
+      discount_amount: this.toNumber(order.discount_amount),
+      tax_amount: this.toNumber(order.tax_amount),
+      shipping_cost: this.toNumber(order.shipping_cost),
+      total_amount: this.toNumber(order.total_amount),
+    };
   }
 
   private async getOrderItems(orderId: string, client?: PoolClient) {
