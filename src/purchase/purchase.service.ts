@@ -52,8 +52,6 @@ type PurchaseOrderItemRow = QueryResultRow & {
   batch_number: string | null;
   created_at: string;
   updated_at: string;
-  purchase_qty: string;
-  receive_qty: string;
   product?: {
     id: string;
     sku: string | null;
@@ -1129,8 +1127,6 @@ export class PurchaseService {
       `
       SELECT
         poi.*,
-        poi.quantity_purchase AS purchase_qty,
-        poi.quantity_received_purchase AS receive_qty,
         json_build_object(
           'id', p.id,
           'sku', p.sku,
@@ -1163,7 +1159,12 @@ export class PurchaseService {
       [orderId],
     );
 
-    return result.rows;
+    return result.rows.map((row) => ({
+      ...row,
+      quantity_purchase: this.toNumber(row.quantity_purchase),
+      quantity_received_purchase: this.toNumber(row.quantity_received_purchase),
+      quantity_purchase_remaining: this.toNumber(row.quantity_purchase_remaining),
+    }));
   }
 
   private async ensureOrderExists(client: PoolClient, id: string) {
