@@ -1131,7 +1131,7 @@ export class PurchaseService {
         poi.*,
         poi.quantity_purchase AS purchase_qty,
         poi.quantity_received_purchase AS receive_qty,
-        row_to_json(json_build_object(
+        json_build_object(
           'id', p.id,
           'sku', p.sku,
           'barcode', p.barcode,
@@ -1145,7 +1145,7 @@ export class PurchaseService {
           'unit_id', p.unit_id,
           'default_unit_id', p.default_unit_id,
           'current_stock', p.current_stock
-        )) AS product,
+        ) AS product,
         p.name AS product_name,
         p.unit_id AS stock_unit_id,
         p.default_unit_id,
