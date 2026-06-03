@@ -1164,6 +1164,12 @@ export class PurchaseService {
       quantity_purchase: this.toNumber(row.quantity_purchase),
       quantity_received_purchase: this.toNumber(row.quantity_received_purchase),
       quantity_purchase_remaining: this.toNumber(row.quantity_purchase_remaining),
+      quantity_stock_remaining: this.toNumber(row.quantity_stock_remaining),
+      convert_rate_used: this.toNumber(row.convert_rate_used),
+      unit_cost: this.toNumber(row.unit_cost),
+      discount: this.toNumber(row.discount),
+      tax: this.toNumber(row.tax),
+      line_total: this.toNumber(row.line_total),
     }));
   }
 
