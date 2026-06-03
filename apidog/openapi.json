@@ -10047,7 +10047,7 @@
             "type": "string",
             "format": "uuid"
           },
-          "quantity_purchase": {
+          "quantity_receive": {
             "type": "number",
             "description": "Received quantity in purchase unit"
           },
@@ -10070,7 +10070,7 @@
         },
         "required": [
           "purchase_order_item_id",
-          "quantity_purchase"
+          "quantity_receive"
         ]
       },
       "ReceivePurchaseOrderDto": {

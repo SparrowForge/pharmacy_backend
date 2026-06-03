@@ -11,7 +11,7 @@ export class ReceivePurchaseOrderItemDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0.000001)
-  quantity_purchase: number;
+  quantity_receive: number;
 
   @ApiPropertyOptional({ description: 'Cost per purchase unit override' })
   @IsOptional()

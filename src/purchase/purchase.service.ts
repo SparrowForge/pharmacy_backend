@@ -424,18 +424,18 @@ export class PurchaseService {
       for (const itemDto of dto.items) {
         const poItem = await this.getOrderItemById(client, orderId, itemDto.purchase_order_item_id, true);
 
-        const quantityPurchase = this.ensurePositive(itemDto.quantity_purchase, 'quantity_purchase');
+        const quantityReceive = this.ensurePositive(itemDto.quantity_receive, 'quantity_receive');
         const remainingPurchase =
           this.toNumber(poItem.quantity_purchase) - this.toNumber(poItem.quantity_received_purchase);
 
-        if (quantityPurchase > remainingPurchase + 0.000001) {
+        if (quantityReceive > remainingPurchase + 0.000001) {
           throw new BadRequestException(
             `Received purchase quantity exceeds remaining quantity for item ${poItem.id}`,
           );
         }
 
         const quantityStock = this.toStockQuantity(
-          quantityPurchase,
+          quantityReceive,
           this.toNumber(poItem.convert_rate_used),
         );
         const remainingStock = poItem.quantity_stock - poItem.quantity_received_stock;
@@ -451,7 +451,7 @@ export class PurchaseService {
             ? this.ensureNonNegative(itemDto.unit_cost, 'unit_cost')
             : this.toNumber(poItem.unit_cost);
 
-        const lineTotal = this.roundMoney(quantityPurchase * unitCost);
+        const lineTotal = this.roundMoney(quantityReceive * unitCost);
         totalAmount += lineTotal;
 
         const resolvedBatchId = await this.resolveReceiptBatchId(client, {
@@ -501,9 +501,9 @@ export class PurchaseService {
             poItem.product_id,
             resolvedBatchId ?? null,
             poItem.purchase_unit_id,
-            quantityPurchase,
+            quantityReceive,
             quantityStock,
-            quantityStock,
+            (quantityReceive + quantityStock),
             this.toNumber(poItem.convert_rate_used),
             unitCost,
             itemDto.expiry_date ?? null,
@@ -513,7 +513,7 @@ export class PurchaseService {
         );
 
         const updatedReceivedPurchase =
-          this.toNumber(poItem.quantity_received_purchase) + quantityPurchase;
+          this.toNumber(poItem.quantity_received_purchase) + quantityReceive;
         const updatedReceivedStock = poItem.quantity_received_stock + quantityStock;
 
         await client.query(
@@ -1252,14 +1252,17 @@ export class PurchaseService {
     return product;
   }
 
+  private generateDocumentNumber(prefix: string) {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, '0');
+    return `${prefix}-${timestamp}-${random}`;
+  }
+
   private async generatePurchaseOrderNumber(client: PoolClient) {
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const timestamp = Date.now();
-      const random = Math.floor(Math.random() * 10000)
-        .toString()
-        .padStart(4, '0');
-      const candidate = `PO-${timestamp}-${random}`;
-
+      const candidate = this.generateDocumentNumber('PO');
       const exists = await client.query<{ exists: boolean }>(
         `
         SELECT EXISTS (
@@ -1281,12 +1284,7 @@ export class PurchaseService {
 
   private async generateReceiptNumber(client: PoolClient) {
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const timestamp = Date.now();
-      const random = Math.floor(Math.random() * 10000)
-        .toString()
-        .padStart(4, '0');
-      const candidate = `PR-${timestamp}-${random}`;
-
+      const candidate = this.generateDocumentNumber('PR');
       const exists = await client.query<{ exists: boolean }>(
         `
         SELECT EXISTS (
