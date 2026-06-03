@@ -12,7 +12,12 @@ export class ProductBatchesService {
   constructor(private readonly basicCrudService: BasicCrudService) {}
 
   list(query: ListProductBatchesQueryDto) {
-    return this.basicCrudService.list(this.entity, this.table, query);
+    const exactFilters: Record<string, unknown> = {};
+    if (query.product_id) {
+      exactFilters.product_id = query.product_id;
+    }
+
+    return this.basicCrudService.list(this.entity, this.table, query, exactFilters);
   }
 
   getById(id: string) {

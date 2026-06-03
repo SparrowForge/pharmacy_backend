@@ -3920,6 +3920,15 @@
             }
           },
           {
+            "name": "product_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "includeDeleted",
             "required": false,
             "in": "query",
