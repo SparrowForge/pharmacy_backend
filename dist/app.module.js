@@ -15,6 +15,7 @@ const audits_module_1 = require("./audits/audits.module");
 const basic_tables_module_1 = require("./basic/basic-tables.module");
 const database_module_1 = require("./database/database.module");
 const purchase_module_1 = require("./purchase/purchase.module");
+const purchase_receipts_module_1 = require("./purchase-receipts/purchase-receipts.module");
 const sales_module_1 = require("./sales/sales.module");
 const users_module_1 = require("./users/users.module");
 let AppModule = class AppModule {
@@ -29,6 +30,7 @@ exports.AppModule = AppModule = __decorate([
             audits_module_1.AuditsModule,
             basic_tables_module_1.BasicTablesModule,
             purchase_module_1.PurchaseModule,
+            purchase_receipts_module_1.PurchaseReceiptsModule,
             sales_module_1.SalesModule,
         ],
         controllers: [app_controller_1.AppController],

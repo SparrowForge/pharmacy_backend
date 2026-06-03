@@ -3920,21 +3920,21 @@
             }
           },
           {
-            "name": "product_id",
-            "required": false,
-            "in": "query",
-            "description": "Filter by product_id",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "includeDeleted",
             "required": false,
             "in": "query",
             "description": "Return soft-deleted records too (true/false)",
             "schema": {
               "default": false,
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product_id",
+            "schema": {
               "type": "string"
             }
           }
@@ -5198,6 +5198,21 @@
           }
         },
         "summary": "Create product_tag",
+        "tags": [
+          "ProductTags"
+        ]
+      }
+    },
+    "/api/v1/product_tags/unique": {
+      "get": {
+        "operationId": "ProductTagsController_getUniqueTags",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get unique product tags",
         "tags": [
           "ProductTags"
         ]
@@ -7079,6 +7094,221 @@
         ]
       }
     },
+    "/api/v1/purchase_orders/{id}/return": {
+      "post": {
+        "operationId": "PurchaseController_returnOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Process purchase return and deduct stock",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/purchase_receipts": {
+      "get": {
+        "operationId": "PurchaseReceiptsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text search across string columns",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "Return soft-deleted records too (true/false)",
+            "schema": {
+              "default": false,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List purchase receipts",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      },
+      "post": {
+        "operationId": "PurchaseReceiptsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a purchase receipt from an existing purchase order",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      }
+    },
+    "/api/v1/purchase_receipts/{id}": {
+      "get": {
+        "operationId": "PurchaseReceiptsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get purchase receipt by id",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      },
+      "patch": {
+        "operationId": "PurchaseReceiptsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update purchase receipt metadata by id",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      },
+      "delete": {
+        "operationId": "PurchaseReceiptsController_softDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Soft delete purchase receipt by id",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      }
+    },
+    "/api/v1/purchase_receipts/{id}/permanent": {
+      "delete": {
+        "operationId": "PurchaseReceiptsController_permanentlyDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Permanently delete purchase receipt by id",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      }
+    },
     "/api/v1/sales_invoices": {
       "get": {
         "operationId": "SalesController_list",
@@ -7143,8 +7373,8 @@
             "required": false,
             "in": "query",
             "schema": {
-              "type": "string",
-              "format": "uuid"
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -7375,55 +7605,6 @@
         "summary": "Complete sales invoice and deduct stock",
         "tags": [
           "SalesInvoices"
-        ]
-      }
-    },
-    "/api/v1/purchase_orders/{id}/return": {
-      "post": {
-        "operationId": "PurchaseController_returnOrder",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePurchaseReturnDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "summary": "Process purchase return and deduct stock",
-        "tags": [
-          "PurchaseOrders"
-        ]
-      }
-    },
-    "/api/v1/product_tags/unique": {
-      "get": {
-        "operationId": "ProductTagsController_getUniqueTags",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get unique product tags",
-        "tags": [
-          "ProductTags"
         ]
       }
     }
@@ -8722,14 +8903,14 @@
             "format": "uuid"
           },
           "badge": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
             "example": [
               "featured",
               "hot-deal"
-            ]
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -9361,14 +9542,14 @@
             "format": "uuid"
           },
           "tag": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
             "example": [
               "perferendis",
               "parasitamal"
-            ]
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -10107,6 +10288,136 @@
           "items"
         ]
       },
+      "CreatePurchaseReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "purchase_order_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "return_unit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "return_qty": {
+            "type": "number",
+            "description": "Return quantity in return unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per return unit override"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchase_order_item_id",
+          "return_qty"
+        ]
+      },
+      "CreatePurchaseReturnDto": {
+        "type": "object",
+        "properties": {
+          "return_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePurchaseReturnItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreatePurchaseReceiptDto": {
+        "type": "object",
+        "properties": {
+          "receipt_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "received",
+              "partial",
+              "cancelled"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceivePurchaseOrderItemDto"
+            }
+          },
+          "purchase_order_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "items",
+          "purchase_order_id"
+        ]
+      },
+      "UpdatePurchaseReceiptDto": {
+        "type": "object",
+        "properties": {
+          "receipt_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "received",
+              "partial",
+              "cancelled"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
       "CreateSalesInvoiceItemDto": {
         "type": "object",
         "properties": {
@@ -10352,72 +10663,6 @@
             "type": "string"
           }
         }
-      },
-      "CreatePurchaseReturnItemDto": {
-        "type": "object",
-        "properties": {
-          "purchase_order_item_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "product_batch_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "return_unit_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "return_qty": {
-            "type": "number",
-            "description": "Return quantity in return unit"
-          },
-          "unit_cost": {
-            "type": "number",
-            "description": "Cost per return unit override"
-          },
-          "reason": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "purchase_order_item_id",
-          "return_qty"
-        ]
-      },
-      "CreatePurchaseReturnDto": {
-        "type": "object",
-        "properties": {
-          "return_number": {
-            "type": "string",
-            "maxLength": 80
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "approved",
-              "rejected",
-              "completed",
-              "cancelled"
-            ]
-          },
-          "reason": {
-            "type": "string"
-          },
-          "notes": {
-            "type": "string"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CreatePurchaseReturnItemDto"
-            }
-          }
-        },
-        "required": [
-          "items"
-        ]
       }
     }
   },
