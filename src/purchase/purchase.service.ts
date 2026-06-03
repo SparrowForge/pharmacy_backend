@@ -52,6 +52,23 @@ type PurchaseOrderItemRow = QueryResultRow & {
   batch_number: string | null;
   created_at: string;
   updated_at: string;
+  purchase_qty: string;
+  receive_qty: string;
+  product?: {
+    id: string;
+    sku: string | null;
+    barcode: string | null;
+    name: string;
+    calling_name: string | null;
+    generic_name: string | null;
+    description: string | null;
+    overview: string | null;
+    brand_id: string | null;
+    category_id: string | null;
+    unit_id: string | null;
+    default_unit_id: string | null;
+    current_stock: number;
+  };
 };
 
 type ProductUnitContextRow = QueryResultRow & {
@@ -110,7 +127,9 @@ export class PurchaseService {
       SELECT
         po.*,
         c.name AS supplier_name,
-        COUNT(poi.id)::int AS item_count
+        COUNT(poi.id)::int AS item_count,
+        COALESCE(SUM(poi.quantity_purchase::float), 0)::float AS totalqty,
+        COALESCE(SUM(poi.quantity_received_purchase::float), 0)::float AS totalreceiveqty
       FROM phar_purchase_orders po
       JOIN phar_companies c ON c.id = po.supplier_id
       LEFT JOIN phar_purchase_order_items poi ON poi.purchase_order_id = po.id
@@ -1110,6 +1129,23 @@ export class PurchaseService {
       `
       SELECT
         poi.*,
+        poi.quantity_purchase AS purchase_qty,
+        poi.quantity_received_purchase AS receive_qty,
+        row_to_json(json_build_object(
+          'id', p.id,
+          'sku', p.sku,
+          'barcode', p.barcode,
+          'name', p.name,
+          'calling_name', p.calling_name,
+          'generic_name', p.generic_name,
+          'description', p.description,
+          'overview', p.overview,
+          'brand_id', p.brand_id,
+          'category_id', p.category_id,
+          'unit_id', p.unit_id,
+          'default_unit_id', p.default_unit_id,
+          'current_stock', p.current_stock
+        )) AS product,
         p.name AS product_name,
         p.unit_id AS stock_unit_id,
         p.default_unit_id,
