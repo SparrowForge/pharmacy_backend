@@ -2195,21 +2195,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_address_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharAddressType",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_address_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/company_type": {
       "get": {
         "operationId": "DatatypesController_getPharCompanyType",
@@ -2220,21 +2205,6 @@
           }
         },
         "summary": "Get phar_company_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_company_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharCompanyType",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_company_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2255,21 +2225,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_discount_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharDiscountType",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_discount_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/manufacturing_status": {
       "get": {
         "operationId": "DatatypesController_getPharManufacturingStatus",
@@ -2280,21 +2235,6 @@
           }
         },
         "summary": "Get phar_manufacturing_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_manufacturing_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharManufacturingStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_manufacturing_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2315,21 +2255,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_order_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharOrderStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_order_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/payment_method_type": {
       "get": {
         "operationId": "DatatypesController_getPharPaymentMethodType",
@@ -2340,21 +2265,6 @@
           }
         },
         "summary": "Get phar_payment_method_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_payment_method_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharPaymentMethodType",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_payment_method_type enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2375,21 +2285,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_payment_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharPaymentStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_payment_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/prescription_status": {
       "get": {
         "operationId": "DatatypesController_getPharPrescriptionStatus",
@@ -2400,21 +2295,6 @@
           }
         },
         "summary": "Get phar_prescription_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_prescription_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharPrescriptionStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_prescription_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2435,21 +2315,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_product_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharProductStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_product_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/product_unit_type": {
       "get": {
         "operationId": "DatatypesController_getPharProductUnitType",
@@ -2460,51 +2325,6 @@
           }
         },
         "summary": "Get phar_product_unit_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/phar_product_unit_type": {
-      "get": {
-        "operationId": "DatatypesController_getPharProductUnitTypeAlias",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get phar_product_unit_type enum values (alias)",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_product_unit_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharProductUnitType",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_product_unit_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_phar_product_unit_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharProductUnitTypeAlias",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_product_unit_type enum values (alias)",
         "tags": [
           "Datatypes"
         ]
@@ -2525,21 +2345,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_purchase_order_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharPurchaseOrderStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_purchase_order_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/receipt_status": {
       "get": {
         "operationId": "DatatypesController_getPharReceiptStatus",
@@ -2550,21 +2355,6 @@
           }
         },
         "summary": "Get phar_receipt_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_receipt_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharReceiptStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_receipt_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2585,21 +2375,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_return_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharReturnStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_return_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/sales_status": {
       "get": {
         "operationId": "DatatypesController_getPharSalesStatus",
@@ -2610,21 +2385,6 @@
           }
         },
         "summary": "Get phar_sales_status enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_sales_status": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharSalesStatus",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_sales_status enum values",
         "tags": [
           "Datatypes"
         ]
@@ -2645,21 +2405,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_shop_plan": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharShopPlan",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_shop_plan enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/stock_movement_type": {
       "get": {
         "operationId": "DatatypesController_getPharStockMovementType",
@@ -2675,21 +2420,6 @@
         ]
       }
     },
-    "/api/v1/datatypes/_stock_movement_type": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharStockMovementType",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_stock_movement_type enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
     "/api/v1/datatypes/user_role": {
       "get": {
         "operationId": "DatatypesController_getPharUserRole",
@@ -2700,21 +2430,6 @@
           }
         },
         "summary": "Get phar_user_role enum values",
-        "tags": [
-          "Datatypes"
-        ]
-      }
-    },
-    "/api/v1/datatypes/_user_role": {
-      "get": {
-        "operationId": "DatatypesController_getUnderscorePharUserRole",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get _phar_user_role enum values",
         "tags": [
           "Datatypes"
         ]

@@ -132,9 +132,9 @@ export class PurchaseService {
     };
   }
 
-  async getById(id: string) {
-    const order = await this.getOrderById(id);
-    const items = await this.getOrderItems(id);
+  async getById(id: string, client?: PoolClient) {
+    const order = await this.getOrderById(id, client);
+    const items = await this.getOrderItems(id, client);
 
     return {
       ...order,
@@ -203,7 +203,7 @@ export class PurchaseService {
       }
 
       await this.recalculateOrderTotals(client, order.id);
-      return this.getById(order.id);
+      return this.getById(order.id, client);
     });
   }
 
@@ -246,7 +246,7 @@ export class PurchaseService {
       }
 
       await this.recalculateOrderTotals(client, id);
-      return this.getById(id);
+      return this.getById(id, client);
     });
   }
 
@@ -255,7 +255,7 @@ export class PurchaseService {
       await this.ensureOrderExists(client, orderId);
       await this.insertOrderItem(client, orderId, dto);
       await this.recalculateOrderTotals(client, orderId);
-      return this.getById(orderId);
+      return this.getById(orderId, client);
     });
   }
 
@@ -335,7 +335,7 @@ export class PurchaseService {
 
       await this.recalculateOrderTotals(client, orderId);
       await this.syncOrderReceiptStatus(client, orderId);
-      return this.getById(orderId);
+      return this.getById(orderId, client);
     });
   }
 
@@ -361,7 +361,7 @@ export class PurchaseService {
 
       await this.recalculateOrderTotals(client, orderId);
       await this.syncOrderReceiptStatus(client, orderId);
-      return this.getById(orderId);
+      return this.getById(orderId, client);
     });
   }
 
@@ -842,7 +842,7 @@ export class PurchaseService {
       return {
         message: 'Purchase return processed successfully',
         purchase_return: purchaseReturnResult.rows[0],
-        order: await this.getById(orderId),
+        order: await this.getById(orderId, client),
       };
     });
   }
@@ -1082,8 +1082,9 @@ export class PurchaseService {
     );
   }
 
-  private async getOrderById(id: string) {
-    const result = await this.databaseService.query(
+  private async getOrderById(id: string, client?: PoolClient) {
+    const executor = client ?? this.databaseService;
+    const result = await executor.query<PurchaseOrderRow>(
       `
       SELECT
         po.*,
@@ -1103,8 +1104,9 @@ export class PurchaseService {
     return order;
   }
 
-  private async getOrderItems(orderId: string) {
-    const result = await this.databaseService.query(
+  private async getOrderItems(orderId: string, client?: PoolClient) {
+    const executor = client ?? this.databaseService;
+    const result = await executor.query<PurchaseOrderItemRow>(
       `
       SELECT
         poi.*,
