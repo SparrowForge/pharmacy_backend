@@ -754,6 +754,7 @@ CREATE TABLE phar_purchase_returns (
   created_by UUID REFERENCES phar_users(id),
   processed_by UUID REFERENCES phar_users(id),
   processed_at TIMESTAMPTZ,
+  is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

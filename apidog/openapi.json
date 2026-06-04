@@ -7060,19 +7060,97 @@
         ]
       }
     },
-    "/api/v1/purchase_orders/{id}/return": {
-      "post": {
-        "operationId": "PurchaseController_returnOrder",
+    "/api/v1/purchase_return": {
+      "get": {
+        "operationId": "PurchaseReturnController_list",
         "parameters": [
           {
-            "name": "id",
-            "required": true,
-            "in": "path",
+            "name": "page",
+            "required": false,
+            "in": "query",
             "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text search across string columns",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "Return soft-deleted records too (true/false)",
+            "schema": {
+              "default": false,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "completed",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "supplier_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "purchase_order_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List purchase returns",
+        "tags": [
+          "PurchaseReturns"
+        ]
+      },
+      "post": {
+        "operationId": "PurchaseReturnController_create",
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -7088,9 +7166,111 @@
             "description": ""
           }
         },
-        "summary": "Process purchase return and deduct stock",
+        "summary": "Create purchase return (purchase_order_id in payload) and deduct stock",
         "tags": [
-          "PurchaseOrders"
+          "PurchaseReturns"
+        ]
+      }
+    },
+    "/api/v1/purchase_return/{id}": {
+      "get": {
+        "operationId": "PurchaseReturnController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get purchase return details by id",
+        "tags": [
+          "PurchaseReturns"
+        ]
+      },
+      "patch": {
+        "operationId": "PurchaseReturnController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update purchase return; re-applies stock when items change",
+        "tags": [
+          "PurchaseReturns"
+        ]
+      },
+      "delete": {
+        "operationId": "PurchaseReturnController_softDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Soft delete purchase return and reverse stock",
+        "tags": [
+          "PurchaseReturns"
+        ]
+      }
+    },
+    "/api/v1/purchase_return/{id}/permanent": {
+      "delete": {
+        "operationId": "PurchaseReturnController_permanentDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Permanently delete purchase return and reverse stock",
+        "tags": [
+          "PurchaseReturns"
         ]
       }
     },
@@ -7272,6 +7452,62 @@
         "summary": "Permanently delete purchase receipt by id",
         "tags": [
           "PurchaseReceipts"
+        ]
+      }
+    },
+    "/api/v1/reports/stock": {
+      "get": {
+        "operationId": "ReportsController_stock",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product category",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by a single product",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Stock report (opening, receive, purchase return, sales, closing) over a date range, optionally filtered by category and product",
+        "tags": [
+          "Reports"
         ]
       }
     },
@@ -10187,73 +10423,6 @@
           }
         }
       },
-      "ReceivePurchaseOrderItemDto": {
-        "type": "object",
-        "properties": {
-          "purchase_order_item_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "quantity_receive": {
-            "type": "number",
-            "description": "Received quantity in purchase unit"
-          },
-          "unit_cost": {
-            "type": "number",
-            "description": "Cost per purchase unit override"
-          },
-          "expiry_date": {
-            "type": "string",
-            "format": "date"
-          },
-          "lot_number": {
-            "type": "string",
-            "maxLength": 80
-          },
-          "product_batch_id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "purchase_order_item_id",
-          "quantity_receive"
-        ]
-      },
-      "ReceivePurchaseOrderDto": {
-        "type": "object",
-        "properties": {
-          "receipt_number": {
-            "type": "string",
-            "maxLength": 80
-          },
-          "received_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "received",
-              "partial",
-              "cancelled"
-            ]
-          },
-          "notes": {
-            "type": "string"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ReceivePurchaseOrderItemDto"
-            }
-          }
-        },
-        "required": [
-          "items"
-        ]
-      },
       "CreatePurchaseReturnItemDto": {
         "type": "object",
         "properties": {
@@ -10289,6 +10458,11 @@
       "CreatePurchaseReturnDto": {
         "type": "object",
         "properties": {
+          "purchase_order_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Purchase order the return is created against"
+          },
           "return_number": {
             "type": "string",
             "maxLength": 80
@@ -10317,7 +10491,73 @@
           }
         },
         "required": [
+          "purchase_order_id",
           "items"
+        ]
+      },
+      "UpdatePurchaseReturnDto": {
+        "type": "object",
+        "properties": {
+          "return_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "description": "When provided, fully replaces the return lines. Existing stock effects are reversed and the new lines are re-applied.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePurchaseReturnItemDto"
+            }
+          }
+        }
+      },
+      "ReceivePurchaseOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "purchase_order_item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity_receive": {
+            "type": "number",
+            "description": "Received quantity in purchase unit"
+          },
+          "unit_cost": {
+            "type": "number",
+            "description": "Cost per purchase unit override"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "lot_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "product_batch_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "purchase_order_item_id",
+          "quantity_receive"
         ]
       },
       "CreatePurchaseReceiptDto": {

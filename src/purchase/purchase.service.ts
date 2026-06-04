@@ -4,6 +4,7 @@ import { DatabaseService } from '../database/database.service';
 import { AddPurchaseOrderItemDto } from './dto/add-purchase-order-item.dto';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { CreatePurchaseReturnDto } from './dto/create-purchase-return.dto';
+import { CreatePurchaseReturnItemDto } from './dto/create-purchase-return-item.dto';
 import { ListPurchaseOrdersQueryDto } from './dto/list-purchase-orders-query.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto';
@@ -670,171 +671,14 @@ export class PurchaseService {
       let totalAmount = 0;
 
       for (const itemDto of dto.items) {
-        const poItem = await this.getOrderItemById(
-          client,
-          orderId,
-          itemDto.purchase_order_item_id,
-          true,
-        );
-
-        const product = await this.getProductUnitContext(client, poItem.product_id, true);
-        if (!product.unit_id) {
-          throw new BadRequestException(`Product "${poItem.product_id}" has no stock unit_id`);
-        }
-
-        const returnQty = this.ensurePositive(itemDto.return_qty, 'return_qty');
-        const returnUnitId =
-          itemDto.return_unit_id ?? poItem.purchase_unit_id ?? product.default_unit_id ?? product.unit_id;
-        const convertRate = await this.resolveConvertRate(
-          client,
-          product.unit_id,
-          returnUnitId,
-          'return',
-        );
-        const stockReturnQty = this.toStockQuantity(returnQty, convertRate);
-
-        if ((product.current_stock ?? 0) < stockReturnQty) {
-          throw new BadRequestException(
-            `Insufficient stock for product "${poItem.product_id}". Required ${stockReturnQty}, available ${product.current_stock ?? 0}`,
-          );
-        }
-
-        const returnBatchId = itemDto.product_batch_id ?? poItem.product_batch_id ?? null;
-        if (returnBatchId) {
-          const batchResult = await client.query<{ id: string; quantity_on_hand: number }>(
-            `
-            SELECT id, quantity_on_hand
-            FROM phar_product_batches
-            WHERE id = $1::uuid
-              AND product_id = $2::uuid
-            FOR UPDATE
-            LIMIT 1
-            `,
-            [returnBatchId, poItem.product_id],
-          );
-
-          const batch = batchResult.rows[0];
-          if (!batch) {
-            throw new NotFoundException(
-              `Product batch "${returnBatchId}" not found for product "${poItem.product_id}"`,
-            );
-          }
-
-          if ((batch.quantity_on_hand ?? 0) < stockReturnQty) {
-            throw new BadRequestException(
-              `Insufficient batch stock for batch "${returnBatchId}". Required ${stockReturnQty}, available ${batch.quantity_on_hand ?? 0}`,
-            );
-          }
-
-          await client.query(
-            `
-            UPDATE phar_product_batches
-            SET quantity_on_hand = quantity_on_hand - $1
-            WHERE id = $2::uuid
-            `,
-            [stockReturnQty, returnBatchId],
-          );
-        }
-
-        const unitCost =
-          itemDto.unit_cost !== undefined
-            ? this.ensureNonNegative(itemDto.unit_cost, 'unit_cost')
-            : this.toNumber(poItem.unit_cost);
-        const lineTotal = this.roundMoney(returnQty * unitCost);
+        const lineTotal = await this.applyReturnItemStock(client, {
+          order,
+          purchaseReturnId,
+          itemDto,
+          notes: dto.notes,
+          processedBy,
+        });
         totalAmount += lineTotal;
-
-        await client.query(
-          `
-          INSERT INTO phar_purchase_return_items (
-            purchase_return_id,
-            product_id,
-            product_batch_id,
-            return_unit_id,
-            return_qty,
-            qty_return_stock,
-            converted_rate_used,
-            quantity,
-            unit_cost,
-            line_total,
-            reason
-          ) VALUES (
-            $1::uuid,
-            $2::uuid,
-            $3::uuid,
-            $4::uuid,
-            $5,
-            $6,
-            $7,
-            $8,
-            $9,
-            $10,
-            $11
-          )
-          `,
-          [
-            purchaseReturnId,
-            poItem.product_id,
-            returnBatchId,
-            returnUnitId,
-            returnQty,
-            stockReturnQty,
-            convertRate,
-            stockReturnQty,
-            unitCost,
-            lineTotal,
-            itemDto.reason ?? null,
-          ],
-        );
-
-        await client.query(
-          `
-          UPDATE phar_products
-          SET current_stock = current_stock - $1
-          WHERE id = $2::uuid
-          `,
-          [stockReturnQty, poItem.product_id],
-        );
-
-        await client.query(
-          `
-          INSERT INTO phar_stock_movements (
-            shop_id,
-            branch_id,
-            product_id,
-            product_batch_id,
-            movement_type,
-            reference_type,
-            reference_id,
-            quantity,
-            unit_cost,
-            notes,
-            created_by
-          ) VALUES (
-            $1::uuid,
-            $2::uuid,
-            $3::uuid,
-            $4::uuid,
-            'purchase_return',
-            'purchase_return',
-            $5::uuid,
-            $6,
-            $7,
-            $8,
-            $9::uuid
-          )
-          `,
-          [
-            order.shop_id ?? null,
-            order.branch_id ?? null,
-            poItem.product_id,
-            returnBatchId,
-            purchaseReturnId,
-            -stockReturnQty,
-            unitCost,
-            itemDto.reason ?? dto.notes ?? null,
-            processedBy ?? null,
-          ],
-        );
       }
 
       await client.query(
@@ -862,6 +706,306 @@ export class PurchaseService {
         order: await this.getById(orderId, client),
       };
     });
+  }
+
+  /**
+   * Applies a single purchase-return line: validates the source PO item,
+   * resolves the return unit/convert-rate, deducts stock (product + batch),
+   * records the return item and a negative stock movement. Returns the line total.
+   * Shared by the purchase-order return endpoint and the standalone
+   * purchase_return module so the stock effect stays consistent.
+   */
+  async applyReturnItemStock(
+    client: PoolClient,
+    params: {
+      order: Pick<PurchaseOrderRow, 'id' | 'shop_id' | 'branch_id'>;
+      purchaseReturnId: string;
+      itemDto: CreatePurchaseReturnItemDto;
+      notes?: string | null;
+      processedBy?: string;
+    },
+  ): Promise<number> {
+    const { order, purchaseReturnId, itemDto, notes, processedBy } = params;
+
+    const poItem = await this.getOrderItemById(
+      client,
+      order.id,
+      itemDto.purchase_order_item_id,
+      true,
+    );
+
+    const product = await this.getProductUnitContext(client, poItem.product_id, true);
+    if (!product.unit_id) {
+      throw new BadRequestException(`Product "${poItem.product_id}" has no stock unit_id`);
+    }
+
+    const returnQty = this.ensurePositive(itemDto.return_qty, 'return_qty');
+    const returnUnitId =
+      itemDto.return_unit_id ?? poItem.purchase_unit_id ?? product.default_unit_id ?? product.unit_id;
+    const convertRate = await this.resolveConvertRate(
+      client,
+      product.unit_id,
+      returnUnitId,
+      'return',
+    );
+    const stockReturnQty = this.toStockQuantity(returnQty, convertRate);
+
+    if ((product.current_stock ?? 0) < stockReturnQty) {
+      throw new BadRequestException(
+        `Insufficient stock for product "${poItem.product_id}". Required ${stockReturnQty}, available ${product.current_stock ?? 0}`,
+      );
+    }
+
+    const returnBatchId = itemDto.product_batch_id ?? poItem.product_batch_id ?? null;
+    if (returnBatchId) {
+      const batchResult = await client.query<{ id: string; quantity_on_hand: number }>(
+        `
+        SELECT id, quantity_on_hand
+        FROM phar_product_batches
+        WHERE id = $1::uuid
+          AND product_id = $2::uuid
+        FOR UPDATE
+        LIMIT 1
+        `,
+        [returnBatchId, poItem.product_id],
+      );
+
+      const batch = batchResult.rows[0];
+      if (!batch) {
+        throw new NotFoundException(
+          `Product batch "${returnBatchId}" not found for product "${poItem.product_id}"`,
+        );
+      }
+
+      if ((batch.quantity_on_hand ?? 0) < stockReturnQty) {
+        throw new BadRequestException(
+          `Insufficient batch stock for batch "${returnBatchId}". Required ${stockReturnQty}, available ${batch.quantity_on_hand ?? 0}`,
+        );
+      }
+
+      await client.query(
+        `
+        UPDATE phar_product_batches
+        SET quantity_on_hand = quantity_on_hand - $1
+        WHERE id = $2::uuid
+        `,
+        [stockReturnQty, returnBatchId],
+      );
+    }
+
+    const unitCost =
+      itemDto.unit_cost !== undefined
+        ? this.ensureNonNegative(itemDto.unit_cost, 'unit_cost')
+        : this.toNumber(poItem.unit_cost);
+    const lineTotal = this.roundMoney(returnQty * unitCost);
+
+    await client.query(
+      `
+      INSERT INTO phar_purchase_return_items (
+        purchase_return_id,
+        product_id,
+        product_batch_id,
+        return_unit_id,
+        return_qty,
+        qty_return_stock,
+        converted_rate_used,
+        quantity,
+        unit_cost,
+        line_total,
+        reason
+      ) VALUES (
+        $1::uuid,
+        $2::uuid,
+        $3::uuid,
+        $4::uuid,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11
+      )
+      `,
+      [
+        purchaseReturnId,
+        poItem.product_id,
+        returnBatchId,
+        returnUnitId,
+        returnQty,
+        stockReturnQty,
+        convertRate,
+        stockReturnQty,
+        unitCost,
+        lineTotal,
+        itemDto.reason ?? null,
+      ],
+    );
+
+    await client.query(
+      `
+      UPDATE phar_products
+      SET current_stock = current_stock - $1
+      WHERE id = $2::uuid
+      `,
+      [stockReturnQty, poItem.product_id],
+    );
+
+    await client.query(
+      `
+      INSERT INTO phar_stock_movements (
+        shop_id,
+        branch_id,
+        product_id,
+        product_batch_id,
+        movement_type,
+        reference_type,
+        reference_id,
+        quantity,
+        unit_cost,
+        notes,
+        created_by
+      ) VALUES (
+        $1::uuid,
+        $2::uuid,
+        $3::uuid,
+        $4::uuid,
+        'purchase_return',
+        'purchase_return',
+        $5::uuid,
+        $6,
+        $7,
+        $8,
+        $9::uuid
+      )
+      `,
+      [
+        order.shop_id ?? null,
+        order.branch_id ?? null,
+        poItem.product_id,
+        returnBatchId,
+        purchaseReturnId,
+        -stockReturnQty,
+        unitCost,
+        itemDto.reason ?? notes ?? null,
+        processedBy ?? null,
+      ],
+    );
+
+    return lineTotal;
+  }
+
+  /**
+   * Reverses the stock effect of every line on a purchase return: re-adds the
+   * returned quantity back to the product (and batch, if any) and records a
+   * compensating positive stock movement. Used when a return is updated,
+   * soft-deleted or permanently deleted so inventory stays accurate.
+   */
+  async reverseReturnStock(
+    client: PoolClient,
+    purchaseReturnId: string,
+    processedBy?: string,
+  ): Promise<void> {
+    const returnHeader = await client.query<{
+      id: string;
+      shop_id: string | null;
+      branch_id: string | null;
+    }>(
+      `
+      SELECT id, shop_id, branch_id
+      FROM phar_purchase_returns
+      WHERE id = $1::uuid
+      LIMIT 1
+      `,
+      [purchaseReturnId],
+    );
+
+    const header = returnHeader.rows[0];
+    if (!header) {
+      throw new NotFoundException(`Purchase return not found for id "${purchaseReturnId}"`);
+    }
+
+    const items = await client.query<{
+      product_id: string;
+      product_batch_id: string | null;
+      qty_return_stock: number;
+      unit_cost: string;
+    }>(
+      `
+      SELECT product_id, product_batch_id, qty_return_stock, unit_cost
+      FROM phar_purchase_return_items
+      WHERE purchase_return_id = $1::uuid
+      `,
+      [purchaseReturnId],
+    );
+
+    for (const item of items.rows) {
+      const stockQty = this.toNumber(item.qty_return_stock);
+      if (stockQty <= 0) {
+        continue;
+      }
+
+      if (item.product_batch_id) {
+        await client.query(
+          `
+          UPDATE phar_product_batches
+          SET quantity_on_hand = quantity_on_hand + $1
+          WHERE id = $2::uuid
+          `,
+          [stockQty, item.product_batch_id],
+        );
+      }
+
+      await client.query(
+        `
+        UPDATE phar_products
+        SET current_stock = current_stock + $1
+        WHERE id = $2::uuid
+        `,
+        [stockQty, item.product_id],
+      );
+
+      await client.query(
+        `
+        INSERT INTO phar_stock_movements (
+          shop_id,
+          branch_id,
+          product_id,
+          product_batch_id,
+          movement_type,
+          reference_type,
+          reference_id,
+          quantity,
+          unit_cost,
+          notes,
+          created_by
+        ) VALUES (
+          $1::uuid,
+          $2::uuid,
+          $3::uuid,
+          $4::uuid,
+          'adjustment',
+          'purchase_return_reversal',
+          $5::uuid,
+          $6,
+          $7,
+          $8,
+          $9::uuid
+        )
+        `,
+        [
+          header.shop_id ?? null,
+          header.branch_id ?? null,
+          item.product_id,
+          item.product_batch_id,
+          purchaseReturnId,
+          stockQty,
+          this.toNumber(item.unit_cost),
+          'Reversal of purchase return stock effect',
+          processedBy ?? null,
+        ],
+      );
+    }
   }
 
   private async insertOrderItem(
