@@ -7060,40 +7060,6 @@
         ]
       }
     },
-    "/api/v1/purchase_orders/{id}/receive": {
-      "post": {
-        "operationId": "PurchaseController_receive",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReceivePurchaseOrderDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "summary": "Receive purchase order items and update stock",
-        "tags": [
-          "PurchaseOrders"
-        ]
-      }
-    },
     "/api/v1/purchase_orders/{id}/return": {
       "post": {
         "operationId": "PurchaseController_returnOrder",

@@ -16,7 +16,6 @@ import { AddPurchaseOrderItemDto } from './dto/add-purchase-order-item.dto';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { CreatePurchaseReturnDto } from './dto/create-purchase-return.dto';
 import { ListPurchaseOrdersQueryDto } from './dto/list-purchase-orders-query.dto';
-import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
 import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { PurchaseService } from './purchase.service';
@@ -85,16 +84,6 @@ export class PurchaseController {
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
   ) {
     return this.purchaseService.removeItem(id, itemId);
-  }
-
-  @Post(':id/receive')
-  @ApiOperation({ summary: 'Receive purchase order items and update stock' })
-  receive(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: ReceivePurchaseOrderDto,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    return this.purchaseService.receive(id, dto, req.user?.sub);
   }
 
   @Post(':id/return')
