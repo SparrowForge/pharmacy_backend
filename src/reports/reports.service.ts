@@ -73,11 +73,7 @@ export class ReportsService {
       FROM phar_products p
       LEFT JOIN phar_product_categories cat ON cat.id = p.category_id
       LEFT JOIN LATERAL (
-        SELECT  
-        SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_receipt')
-        -SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_return')
-        -SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sale')
-        +SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sales_return') AS qty        
+        SELECT SUM(sm.quantity) AS qty        
         FROM phar_stock_movements sm
         WHERE sm.product_id = p.id
           AND sm.created_at < $1::date
