@@ -2375,6 +2375,21 @@
         ]
       }
     },
+    "/api/v1/datatypes/sale_type": {
+      "get": {
+        "operationId": "DatatypesController_getPharSaleType",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get phar_sale_type enum values",
+        "tags": [
+          "Datatypes"
+        ]
+      }
+    },
     "/api/v1/datatypes/sales_status": {
       "get": {
         "operationId": "DatatypesController_getPharSalesStatus",

@@ -87,6 +87,12 @@ export class DatatypesController {
     return this.getBaseTypeValues('phar_return_status');
   }
 
+  @Get('sale_type')
+  @ApiOperation({ summary: 'Get phar_sale_type enum values' })
+  getPharSaleType() {
+    return this.getBaseTypeValues('phar_sale_type');
+  }
+
   @Get('sales_status')
   @ApiOperation({ summary: 'Get phar_sales_status enum values' })
   getPharSalesStatus() {
