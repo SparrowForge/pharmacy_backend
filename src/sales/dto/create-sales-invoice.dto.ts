@@ -14,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { CreateSalesInvoiceItemDto } from './create-sales-invoice-item.dto';
+import { SalePaymentDto } from './sale-payment.dto';
 
 const SALES_INVOICE_STATUSES = [
   'draft',
@@ -32,6 +33,8 @@ const PAYMENT_METHOD_TYPES = [
   'check',
   'other',
 ] as const;
+
+const SALE_TYPES = ['cash', 'credit'] as const;
 
 export class CreateSalesInvoiceDto {
   @ApiPropertyOptional({ maxLength: 80 })
@@ -60,10 +63,14 @@ export class CreateSalesInvoiceDto {
   @IsIn(SALES_INVOICE_STATUSES)
   status?: (typeof SALES_INVOICE_STATUSES)[number];
 
-  @ApiPropertyOptional({ enum: PAYMENT_METHOD_TYPES })
+  @ApiPropertyOptional({
+    enum: SALE_TYPES,
+    description: "'cash' auto-sets paid_amount = total. 'credit' allows partial or zero payment.",
+    default: 'cash',
+  })
   @IsOptional()
-  @IsIn(PAYMENT_METHOD_TYPES)
-  payment_method?: (typeof PAYMENT_METHOD_TYPES)[number];
+  @IsIn(SALE_TYPES)
+  sale_type?: (typeof SALE_TYPES)[number];
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -96,6 +103,17 @@ export class CreateSalesInvoiceDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({
+    type: [SalePaymentDto],
+    description: 'Payment lines — multiple methods allowed. Replaces paid_amount when provided.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => SalePaymentDto)
+  payments?: SalePaymentDto[];
+
   @ApiProperty({ type: [CreateSalesInvoiceItemDto] })
   @IsArray()
   @ArrayMinSize(1)
@@ -104,4 +122,4 @@ export class CreateSalesInvoiceDto {
   items: CreateSalesInvoiceItemDto[];
 }
 
-export { PAYMENT_METHOD_TYPES, SALES_INVOICE_STATUSES };
+export { PAYMENT_METHOD_TYPES, SALE_TYPES, SALES_INVOICE_STATUSES };

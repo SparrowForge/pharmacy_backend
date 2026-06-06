@@ -1,10 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PoolClient, QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { AddSalesInvoiceItemDto } from './dto/add-sales-invoice-item.dto';
 import { CompleteSalesInvoiceDto } from './dto/complete-sales-invoice.dto';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { ListSalesInvoicesQueryDto } from './dto/list-sales-invoices-query.dto';
+import { CustomerDuePaymentsQueryDto } from './dto/customer-due-payments-query.dto';
+import { SalePaymentDto } from './dto/sale-payment.dto';
 import { UpdateSalesInvoiceItemDto } from './dto/update-sales-invoice-item.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
 
@@ -16,7 +18,7 @@ type SalesInvoiceRow = QueryResultRow & {
   branch_id: string | null;
   created_by: string | null;
   status: string;
-  payment_method: string;
+  sale_type: 'cash' | 'credit';
   subtotal: string;
   tax_amount: string;
   discount_amount: string;
@@ -59,7 +61,7 @@ type UnitRow = QueryResultRow & {
 };
 
 @Injectable()
-export class SalesService {
+export class SalesService {  
   constructor(private readonly databaseService: DatabaseService) {}
 
   async list(query: ListSalesInvoicesQueryDto) {
@@ -128,11 +130,15 @@ export class SalesService {
 
   async getById(id: string) {
     const invoice = await this.getInvoiceById(id);
-    const items = await this.getInvoiceItems(id);
+    const [items, payments] = await Promise.all([
+      this.getInvoiceItems(id),
+      this.getInvoicePayments(id),
+    ]);
 
     return {
       ...invoice,
       items,
+      payments,
     };
   }
 
@@ -143,6 +149,8 @@ export class SalesService {
       const invoiceNumber =
         dto.invoice_number?.trim() || (await this.generateInvoiceNumber(client));
 
+      const saleType = dto.sale_type ?? 'cash';
+
       const insertedInvoice = await client.query<SalesInvoiceRow>(
         `
         INSERT INTO phar_sales_invoices (
@@ -152,7 +160,7 @@ export class SalesService {
           branch_id,
           created_by,
           status,
-          payment_method,
+          sale_type,
           discount_amount,
           tax_amount,
           paid_amount,
@@ -181,7 +189,7 @@ export class SalesService {
           dto.branch_id ?? null,
           createdBy ?? null,
           statusForInsert,
-          dto.payment_method ?? 'cash',
+          saleType,
           dto.discount_amount ?? 0,
           dto.tax_amount ?? 0,
           dto.paid_amount ?? 0,
@@ -198,9 +206,15 @@ export class SalesService {
 
       await this.recalculateInvoiceTotals(client, invoice.id);
 
+      if (dto.payments?.length) {
+        await this.insertSalePayments(client, invoice.id, dto.payments);
+      }
+
       if (requestedStatus === 'completed') {
+        // payments already inserted above; pass undefined to avoid double-insert
         await this.applyCompletedSale(client, invoice.id, createdBy, {
-          paid_amount: dto.paid_amount,
+          payments: undefined,
+          paid_amount: dto.payments?.length ? undefined : dto.paid_amount,
           invoice_date: dto.invoice_date,
           notes: dto.notes,
         });
@@ -240,7 +254,7 @@ export class SalesService {
       if (dto.shop_id !== undefined) assign('shop_id', dto.shop_id ?? null, '::uuid');
       if (dto.branch_id !== undefined) assign('branch_id', dto.branch_id ?? null, '::uuid');
       if (dto.status !== undefined) assign('status', dto.status);
-      if (dto.payment_method !== undefined) assign('payment_method', dto.payment_method);
+      if (dto.sale_type !== undefined) assign('sale_type', dto.sale_type);
       if (dto.discount_amount !== undefined) assign('discount_amount', dto.discount_amount ?? 0);
       if (dto.tax_amount !== undefined) assign('tax_amount', dto.tax_amount ?? 0);
       if (dto.paid_amount !== undefined) assign('paid_amount', dto.paid_amount ?? 0);
@@ -351,6 +365,123 @@ export class SalesService {
       await this.recalculateInvoiceTotals(client, invoiceId);
       return this.getById(invoiceId);
     });
+  }
+
+  async addPaymentToInvoice(invoiceId: string, payments: SalePaymentDto[], receivedBy?: string) {
+    return this.databaseService.withTransaction(async (client) => {
+      const invoice = await this.ensureInvoiceExists(client, invoiceId, true);
+
+      if (invoice.sale_type !== 'credit') {
+        throw new BadRequestException(
+          'Payments can only be added to credit invoices. Cash invoices are fully settled on completion.',
+        );
+      }
+
+      if (invoice.status !== 'completed') {
+        throw new BadRequestException(
+          'Payments can only be recorded on completed invoices. Complete the invoice first.',
+        );
+      }
+
+      const dueAmount = this.toNumber(invoice.due_amount);
+      if (dueAmount <= 0) {
+        throw new BadRequestException('This invoice has no outstanding balance.');
+      }
+
+      const totalPaymentAmount = payments.reduce((sum, p) => sum + this.toNumber(p.amount), 0);
+      if (totalPaymentAmount > dueAmount + 0.001) {
+        throw new BadRequestException(
+          `Total payment amount (${this.roundMoney(totalPaymentAmount)}) exceeds outstanding due amount (${dueAmount})`,
+        );
+      }
+
+      await this.insertSalePayments(client, invoiceId, payments, receivedBy);
+      await this.recalculateInvoiceTotals(client, invoiceId);
+
+      return this.getById(invoiceId);
+    });
+  }
+
+  async getCustomerDuePayments(customerId: string, query: CustomerDuePaymentsQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const offset = (page - 1) * limit;
+
+    const countResult = await this.databaseService.query<{ total: number }>(
+      `
+      SELECT COUNT(*)::int AS total
+      FROM phar_sales_invoices
+      WHERE customer_id = $1::uuid
+        AND sale_type = 'credit'
+        AND status = 'completed'
+        AND due_amount > 0
+      `,
+      [customerId],
+    );
+
+    const dataResult = await this.databaseService.query(
+      `
+      SELECT
+        si.id,
+        si.invoice_number,
+        si.invoice_date,
+        si.sale_type,
+        si.total_amount,
+        si.paid_amount,
+        si.due_amount,
+        si.status,
+        si.notes,
+        si.created_at,
+        c.name AS customer_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', sp.id,
+              'payment_number', sp.payment_number,
+              'payment_method_id', sp.payment_method_id,
+              'payment_method_name', pm.name,
+              'amount', sp.amount,
+              'status', sp.status,
+              'paid_at', sp.paid_at,
+              'notes', sp.notes
+            ) ORDER BY sp.created_at ASC
+          ) FILTER (WHERE sp.id IS NOT NULL),
+          '[]'
+        ) AS payments
+      FROM phar_sales_invoices si
+      LEFT JOIN phar_companies c ON c.id = si.customer_id
+      LEFT JOIN phar_sale_payments sp ON sp.invoice_id = si.id
+      LEFT JOIN phar_payment_methods pm ON pm.id = sp.payment_method_id
+      WHERE si.customer_id = $1::uuid
+        AND si.sale_type = 'credit'
+        AND si.status = 'completed'
+        AND si.due_amount > 0
+      GROUP BY si.id, c.name
+      ORDER BY si.invoice_date DESC
+      LIMIT $2
+      OFFSET $3
+      `,
+      [customerId, limit, offset],
+    );
+
+    const total = countResult.rows[0]?.total ?? 0;
+    const rows = dataResult.rows.map((row) => ({
+      ...row,
+      total_amount: this.toNumber(row.total_amount),
+      paid_amount: this.toNumber(row.paid_amount),
+      due_amount: this.toNumber(row.due_amount),
+    }));
+
+    const totalDue = rows.reduce((sum, r) => sum + r.due_amount, 0);
+
+    return {
+      customer_id: customerId,
+      page,
+      limit,
+      total,
+      total_due: this.roundMoney(totalDue),
+      data: rows,
+    };
   }
 
   async complete(id: string, dto: CompleteSalesInvoiceDto, completedBy?: string) {
@@ -510,7 +641,19 @@ export class SalesService {
       throw new BadRequestException('Invoice total cannot be negative');
     }
 
-    const paidAmount = this.toNumber(invoice.paid_amount);
+    let paidAmount = this.toNumber(invoice.paid_amount);
+
+    // Cash sales are always fully paid
+    if (invoice.sale_type === 'cash') {
+      paidAmount = totalAmount;
+    }
+
+    if (paidAmount > totalAmount + 0.001) {
+      throw new BadRequestException(
+        `Paid amount (${paidAmount}) cannot exceed total amount (${totalAmount})`,
+      );
+    }
+
     const dueAmount = this.roundMoney(Math.max(totalAmount - paidAmount, 0));
     const changeAmount = this.roundMoney(Math.max(paidAmount - totalAmount, 0));
 
@@ -520,11 +663,12 @@ export class SalesService {
       SET
         subtotal = $1,
         total_amount = $2,
-        due_amount = $3,
-        change_amount = $4
-      WHERE id = $5::uuid
+        paid_amount = $3,
+        due_amount = $4,
+        change_amount = $5
+      WHERE id = $6::uuid
       `,
-      [this.roundMoney(subtotal), totalAmount, dueAmount, changeAmount, invoiceId],
+      [this.roundMoney(subtotal), totalAmount, this.roundMoney(paidAmount), dueAmount, changeAmount, invoiceId],
     );
   }
 
@@ -544,14 +688,15 @@ export class SalesService {
       throw new BadRequestException(`Cannot complete invoice with status "${invoice.status}"`);
     }
 
-    if (options?.paid_amount !== undefined) {
+    if (invoice.sale_type === 'cash') {
+      // Cash: recalculateInvoiceTotals will auto-set paid_amount = total_amount
+    } else if (options?.payments?.length) {
+      await this.insertSalePayments(client, invoiceId, options.payments);
+    } else if (options?.paid_amount !== undefined) {
+      const paid = this.ensureNonNegative(options.paid_amount, 'paid_amount');
       await client.query(
-        `
-        UPDATE phar_sales_invoices
-        SET paid_amount = $1
-        WHERE id = $2::uuid
-        `,
-        [this.ensureNonNegative(options.paid_amount, 'paid_amount'), invoiceId],
+        `UPDATE phar_sales_invoices SET paid_amount = $1 WHERE id = $2::uuid`,
+        [paid, invoiceId],
       );
     }
 
@@ -852,6 +997,97 @@ export class SalesService {
       throw new NotFoundException(`Product not found for id "${productId}"`);
     }
     return product;
+  }
+
+  private async generatePaymentNumber(client: PoolClient) {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      const candidate = `PAY-${timestamp}-${random}`;
+      const exists = await client.query<{ exists: boolean }>(
+        `SELECT EXISTS (SELECT 1 FROM phar_sale_payments WHERE payment_number = $1) AS exists`,
+        [candidate],
+      );
+      if (!exists.rows[0]?.exists) return candidate;
+    }
+    throw new BadRequestException('Failed to generate unique payment number');
+  }
+
+  private async insertSalePayments(
+    client: PoolClient,
+    invoiceId: string,
+    payments: SalePaymentDto[],
+    receivedBy?: string,
+  ) {
+    for (const p of payments) {
+      const amount = this.ensureNonNegative(p.amount, 'payment.amount');
+      const paymentNumber = await this.generatePaymentNumber(client);
+      await client.query(
+        `
+        INSERT INTO phar_sale_payments (
+          invoice_id, payment_number, company_id, shop_id, branch_id,
+          reference_type, reference_id, payment_method_id, amount,
+          status, paid_at, received_by, notes
+        ) VALUES (
+          $1::uuid, $2,
+          $3::uuid, $4::uuid, $5::uuid,
+          $6, $7::uuid, $8::uuid, $9,
+          $10, $11::timestamptz, $12::uuid, $13
+        )
+        `,
+        [
+          invoiceId,
+          paymentNumber,
+          p.company_id ?? null,
+          p.shop_id ?? null,
+          p.branch_id ?? null,
+          p.reference_type ?? null,
+          p.reference_id ?? null,
+          p.payment_method_id ?? null,
+          amount,
+          p.status ?? 'paid',
+          p.paid_at ?? null,
+          receivedBy ?? null,
+          p.notes ?? null,
+        ],
+      );
+    }
+
+    await this.syncInvoicePaidAmount(client, invoiceId);
+  }
+
+  private async syncInvoicePaidAmount(client: PoolClient, invoiceId: string) {
+    const result = await client.query<{ total_paid: string }>(
+      `SELECT COALESCE(SUM(amount), 0) AS total_paid FROM phar_sale_payments WHERE invoice_id = $1::uuid`,
+      [invoiceId],
+    );
+    const totalPaid = this.roundMoney(this.toNumber(result.rows[0]?.total_paid));
+    await client.query(
+      `UPDATE phar_sales_invoices SET paid_amount = $1 WHERE id = $2::uuid`,
+      [totalPaid, invoiceId],
+    );
+  }
+
+  private async getInvoicePayments(invoiceId: string) {
+    const result = await this.databaseService.query(
+      `
+      SELECT
+        sp.id, sp.invoice_id, sp.payment_number, sp.company_id, sp.shop_id, sp.branch_id,
+        sp.reference_type, sp.reference_id, sp.payment_method_id,
+        pm.name AS payment_method_name, pm.method_type AS payment_method_type,
+        sp.amount, sp.status, sp.paid_at, sp.received_by, sp.notes, sp.created_at
+      FROM phar_sale_payments sp
+      LEFT JOIN phar_payment_methods pm ON pm.id = sp.payment_method_id
+      WHERE sp.invoice_id = $1::uuid
+      ORDER BY sp.created_at ASC
+      `,
+      [invoiceId],
+    );
+
+    return result.rows.map((row) => ({
+      ...row,
+      amount: this.toNumber(row.amount),
+    }));
   }
 
   private ensureInvoiceMutableForItems(invoice: SalesInvoiceRow) {

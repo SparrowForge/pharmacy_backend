@@ -1,9 +1,33 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDateString,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { SalePaymentDto } from './sale-payment.dto';
 
 export class CompleteSalesInvoiceDto {
-  @ApiPropertyOptional({ description: 'Override paid amount before completion' })
+  @ApiPropertyOptional({
+    type: [SalePaymentDto],
+    description:
+      'Payment lines — multiple methods allowed. Replaces paid_amount when provided.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => SalePaymentDto)
+  payments?: SalePaymentDto[];
+
+  @ApiPropertyOptional({
+    description: 'Simple single paid amount (ignored when payments array is provided)',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

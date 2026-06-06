@@ -15,7 +15,10 @@ import { Request } from 'express';
 import { AddSalesInvoiceItemDto } from './dto/add-sales-invoice-item.dto';
 import { CompleteSalesInvoiceDto } from './dto/complete-sales-invoice.dto';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
+import { CustomerDuePaymentsQueryDto } from './dto/customer-due-payments-query.dto';
 import { ListSalesInvoicesQueryDto } from './dto/list-sales-invoices-query.dto';
+import { AddSalePaymentsDto } from './dto/add-sale-payments.dto';
+import { SalePaymentDto } from './dto/sale-payment.dto';
 import { UpdateSalesInvoiceItemDto } from './dto/update-sales-invoice-item.dto';
 import { UpdateSalesInvoiceDto } from './dto/update-sales-invoice.dto';
 import { SalesService } from './sales.service';
@@ -41,6 +44,15 @@ export class SalesController {
   @ApiOperation({ summary: 'Create sales invoice with items' })
   create(@Body() dto: CreateSalesInvoiceDto, @Req() req: AuthenticatedRequest) {
     return this.salesService.create(dto, req.user?.sub);
+  }
+
+  @Get('customers/:customerId/due-payments')
+  @ApiOperation({ summary: 'List all due credit invoices for a customer' })
+  getCustomerDuePayments(
+    @Param('customerId', new ParseUUIDPipe()) customerId: string,
+    @Query() query: CustomerDuePaymentsQueryDto,
+  ) {
+    return this.salesService.getCustomerDuePayments(customerId, query);
   }
 
   @Get(':id')
@@ -84,6 +96,16 @@ export class SalesController {
     @Param('itemId', new ParseUUIDPipe()) itemId: string,
   ) {
     return this.salesService.removeItem(id, itemId);
+  }
+
+  @Post(':id/payments')
+  @ApiOperation({ summary: 'Add payments to a completed credit invoice' })
+  addPayment(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: AddSalePaymentsDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.salesService.addPaymentToInvoice(id, dto.payments, req.user?.sub);
   }
 
   @Post(':id/complete')

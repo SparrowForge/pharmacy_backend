@@ -13,6 +13,7 @@ const app_service_1 = require("./app.service");
 const auth_module_1 = require("./auth/auth.module");
 const audits_module_1 = require("./audits/audits.module");
 const basic_tables_module_1 = require("./basic/basic-tables.module");
+const cloudinary_module_1 = require("./cloudinary/cloudinary.module");
 const database_module_1 = require("./database/database.module");
 const purchase_module_1 = require("./purchase/purchase.module");
 const purchase_return_module_1 = require("./purchase-return/purchase-return.module");
@@ -27,6 +28,7 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             database_module_1.DatabaseModule,
+            cloudinary_module_1.CloudinaryModule,
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             audits_module_1.AuditsModule,

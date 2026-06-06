@@ -3328,7 +3328,48 @@
             "description": ""
           }
         },
-        "summary": "Create media_file",
+        "summary": "Create media_file record manually (no upload)",
+        "tags": [
+          "MediaFiles"
+        ]
+      }
+    },
+    "/api/v1/media_files/upload": {
+      "post": {
+        "operationId": "MediaFilesController_uploadFile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "alt_text": {
+                    "type": "string"
+                  },
+                  "uploaded_by": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Upload a file to Cloudinary and save metadata",
         "tags": [
           "MediaFiles"
         ]
@@ -7614,6 +7655,51 @@
         ]
       }
     },
+    "/api/v1/sales_invoices/customers/{customerId}/due-payments": {
+      "get": {
+        "operationId": "SalesController_getCustomerDuePayments",
+        "parameters": [
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List all due credit invoices for a customer",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
+    },
     "/api/v1/sales_invoices/{id}": {
       "get": {
         "operationId": "SalesController_getById",
@@ -7771,6 +7857,40 @@
           }
         },
         "summary": "Delete sales invoice item",
+        "tags": [
+          "SalesInvoices"
+        ]
+      }
+    },
+    "/api/v1/sales_invoices/{id}/payments": {
+      "post": {
+        "operationId": "SalesController_addPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSalePaymentsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Add payments to a completed credit invoice",
         "tags": [
           "SalesInvoices"
         ]
@@ -10624,6 +10744,66 @@
           }
         }
       },
+      "SalePaymentDto": {
+        "type": "object",
+        "properties": {
+          "payment_method_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID from phar_payment_methods table"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount paid via this method"
+          },
+          "company_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Customer/company making the payment"
+          },
+          "shop_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference_type": {
+            "type": "string",
+            "description": "e.g. 'cheque', 'bank_transfer', 'pos_terminal'"
+          },
+          "reference_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the referenced document/transaction"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "partial",
+              "paid",
+              "failed",
+              "refunded",
+              "cancelled"
+            ],
+            "default": "paid"
+          },
+          "paid_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the payment was physically received"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_method_id",
+          "amount"
+        ]
+      },
       "CreateSalesInvoiceItemDto": {
         "type": "object",
         "properties": {
@@ -10689,17 +10869,14 @@
               "returned"
             ]
           },
-          "payment_method": {
+          "sale_type": {
             "type": "string",
             "enum": [
               "cash",
-              "card",
-              "credit",
-              "mobile",
-              "bank_transfer",
-              "check",
-              "other"
-            ]
+              "credit"
+            ],
+            "description": "'cash' auto-sets paid_amount = total. 'credit' allows partial or zero payment.",
+            "default": "cash"
           },
           "discount_amount": {
             "type": "number"
@@ -10716,6 +10893,13 @@
           },
           "notes": {
             "type": "string"
+          },
+          "payments": {
+            "description": "Payment lines — multiple methods allowed. Replaces paid_amount when provided.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalePaymentDto"
+            }
           },
           "items": {
             "type": "array",
@@ -10757,17 +10941,14 @@
               "returned"
             ]
           },
-          "payment_method": {
+          "sale_type": {
             "type": "string",
             "enum": [
               "cash",
-              "card",
-              "credit",
-              "mobile",
-              "bank_transfer",
-              "check",
-              "other"
-            ]
+              "credit"
+            ],
+            "description": "'cash' auto-sets paid_amount = total. 'credit' allows partial or zero payment.",
+            "default": "cash"
           },
           "discount_amount": {
             "type": "number"
@@ -10784,6 +10965,13 @@
           },
           "notes": {
             "type": "string"
+          },
+          "payments": {
+            "description": "Payment lines — multiple methods allowed. Replaces paid_amount when provided.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalePaymentDto"
+            }
           }
         }
       },
@@ -10854,12 +11042,34 @@
           }
         }
       },
+      "AddSalePaymentsDto": {
+        "type": "object",
+        "properties": {
+          "payments": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalePaymentDto"
+            }
+          }
+        },
+        "required": [
+          "payments"
+        ]
+      },
       "CompleteSalesInvoiceDto": {
         "type": "object",
         "properties": {
+          "payments": {
+            "description": "Payment lines — multiple methods allowed. Replaces paid_amount when provided.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalePaymentDto"
+            }
+          },
           "paid_amount": {
             "type": "number",
-            "description": "Override paid amount before completion"
+            "description": "Simple single paid amount (ignored when payments array is provided)"
           },
           "invoice_date": {
             "type": "string",

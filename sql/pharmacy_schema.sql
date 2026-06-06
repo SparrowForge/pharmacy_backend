@@ -97,6 +97,11 @@ CREATE TYPE phar_return_status AS ENUM (
   'cancelled'
 );
 
+CREATE TYPE phar_sale_type AS ENUM (
+  'cash',
+  'credit'
+);
+
 CREATE TYPE phar_sales_status AS ENUM (
   'draft',
   'completed',
@@ -428,6 +433,7 @@ CREATE TABLE phar_media_files (
   file_size BIGINT,
   alt_text TEXT,
   uploaded_by UUID REFERENCES phar_users(id),
+  cloudinary_public_id TEXT,
   is_delete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -789,7 +795,7 @@ CREATE TABLE phar_sales_invoices (
   branch_id UUID REFERENCES phar_branches(id),
   created_by UUID REFERENCES phar_users(id),
   status phar_sales_status NOT NULL DEFAULT 'draft',
-  payment_method phar_payment_method_type NOT NULL DEFAULT 'cash',
+  sale_type phar_sale_type NOT NULL DEFAULT 'cash',
   subtotal NUMERIC(16,2) NOT NULL DEFAULT 0,
   tax_amount NUMERIC(14,2) DEFAULT 0,
   discount_amount NUMERIC(14,2) DEFAULT 0,
@@ -806,6 +812,27 @@ CREATE TABLE phar_sales_invoices (
 CREATE INDEX phar_idx_sales_invoices_customer_id ON phar_sales_invoices(customer_id);
 CREATE INDEX phar_idx_sales_invoices_invoice_date ON phar_sales_invoices(invoice_date);
 CREATE INDEX phar_idx_sales_invoices_invoice_number ON phar_sales_invoices(invoice_number);
+
+CREATE TABLE phar_sale_payments (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id        UUID NOT NULL REFERENCES phar_sales_invoices(id) ON DELETE CASCADE,
+  payment_number    VARCHAR(80) UNIQUE NOT NULL,
+  company_id        UUID REFERENCES phar_companies(id),
+  shop_id           UUID REFERENCES phar_shops(id),
+  branch_id         UUID REFERENCES phar_branches(id),
+  reference_type    TEXT,
+  reference_id      UUID,
+  payment_method_id UUID REFERENCES phar_payment_methods(id),
+  amount            NUMERIC(16,2) NOT NULL DEFAULT 0,
+  status            phar_payment_status NOT NULL DEFAULT 'pending',
+  paid_at           TIMESTAMPTZ,
+  received_by       UUID REFERENCES phar_users(id),
+  notes             TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX phar_idx_sale_payments_invoice ON phar_sale_payments(invoice_id);
 
 CREATE TABLE phar_sales_invoice_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1058,24 +1085,6 @@ CREATE TABLE phar_payment_methods (
   icon TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   is_delete BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE phar_payments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  payment_number VARCHAR(80) UNIQUE NOT NULL,
-  company_id UUID REFERENCES phar_companies(id),
-  shop_id UUID REFERENCES phar_shops(id),
-  branch_id UUID REFERENCES phar_branches(id),
-  reference_type TEXT,
-  reference_id UUID,
-  payment_method_id UUID REFERENCES phar_payment_methods(id),
-  amount NUMERIC(16,2) NOT NULL DEFAULT 0,
-  status phar_payment_status NOT NULL DEFAULT 'pending',
-  paid_at TIMESTAMPTZ,
-  received_by UUID REFERENCES phar_users(id),
-  notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
