@@ -7409,6 +7409,33 @@
         ]
       }
     },
+    "/api/v1/purchase_receipts/available-items": {
+      "get": {
+        "operationId": "PurchaseReceiptsController_listAvailableItems",
+        "parameters": [
+          {
+            "name": "product_id",
+            "required": true,
+            "in": "query",
+            "description": "UUID of the product to list available receipt items for",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List receipt items for a product whose batch still has stock available for sale",
+        "description": "Returns purchase receipt items for the given product where the linked batch is not deleted and still has quantity_on_hand > 0 (i.e. not fully sold or returned). Each item includes the batch selling_price and available_stock (the batch's current quantity_on_hand).",
+        "tags": [
+          "PurchaseReceipts"
+        ]
+      }
+    },
     "/api/v1/purchase_receipts/{id}": {
       "get": {
         "operationId": "PurchaseReceiptsController_getById",

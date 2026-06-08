@@ -96,7 +96,50 @@ export class PurchaseReceiptsService {
 
     return {
       ...receipt,
-      items: itemsResult.rows,
+      items: itemsResult.rows.map((item: Record<string, unknown>) => this.mapItemNumbers(item)),
+    };
+  }
+
+  async listAvailableItemsByProduct(productId: string) {
+    const itemsResult = await this.databaseService.query(
+      `
+      SELECT pri.*, p.name AS product_name, pb.batch_number AS batch_number,
+             pu.name AS purchase_unit_name,
+             pb.selling_price,
+             pb.quantity_on_hand AS available_stock
+      FROM phar_purchase_receipt_items pri
+      JOIN phar_products p ON p.id = pri.product_id
+      JOIN phar_product_batches pb ON pb.id = pri.product_batch_id
+      LEFT JOIN phar_product_units pu ON pu.id = pri.purchase_unit_id
+      WHERE pri.product_id = $1::uuid
+        AND COALESCE(pb.is_delete, FALSE) = FALSE
+        AND pb.quantity_on_hand > 0
+      ORDER BY pri.created_at ASC
+      `,
+      [productId],
+    );
+
+    return {
+      product_id: productId,
+      items: itemsResult.rows.map((item: Record<string, unknown>) => ({
+        ...this.mapItemNumbers(item),
+        selling_price: item.selling_price === null ? null : Number(item.selling_price),
+        available_stock: item.available_stock === null ? null : Number(item.available_stock),
+      })),
+    };
+  }
+
+  private mapItemNumbers(item: Record<string, unknown>) {
+    return {
+      ...item,
+      unit_cost: item.unit_cost === null ? null : Number(item.unit_cost),
+      line_total: item.line_total === null ? null : Number(item.line_total),
+      quantity_received_purchase:
+        item.quantity_received_purchase === null ? null : Number(item.quantity_received_purchase),
+      quantity_received_stock:
+        item.quantity_received_stock === null ? null : Number(item.quantity_received_stock),
+      convert_rate_used:
+        item.convert_rate_used === null ? null : Number(item.convert_rate_used),
     };
   }
 

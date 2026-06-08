@@ -10,7 +10,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { CreatePurchaseReceiptDto } from './dto/create-purchase-receipt.dto';
 import { UpdatePurchaseReceiptDto } from './dto/update-purchase-receipt.dto';
@@ -41,6 +41,25 @@ export class PurchaseReceiptsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.receiptsService.create(dto, req.user?.sub);
+  }
+
+  @Get('available-items')
+  @ApiOperation({
+    summary: 'List receipt items for a product whose batch still has stock available for sale',
+    description:
+      'Returns purchase receipt items for the given product where the linked batch is not deleted ' +
+      'and still has quantity_on_hand > 0 (i.e. not fully sold or returned). Each item includes the ' +
+      "batch selling_price and available_stock (the batch's current quantity_on_hand).",
+  })
+  @ApiQuery({
+    name: 'product_id',
+    required: true,
+    type: String,
+    format: 'uuid',
+    description: 'UUID of the product to list available receipt items for',
+  })
+  listAvailableItems(@Query('product_id', new ParseUUIDPipe()) productId: string) {
+    return this.receiptsService.listAvailableItemsByProduct(productId);
   }
 
   @Get(':id')
