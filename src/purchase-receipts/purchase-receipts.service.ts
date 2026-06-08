@@ -103,18 +103,22 @@ export class PurchaseReceiptsService {
   async listAvailableItemsByProduct(productId: string) {
     const itemsResult = await this.databaseService.query(
       `
-      SELECT pri.*, p.name AS product_name, pb.batch_number AS batch_number,
-             pu.name AS purchase_unit_name,
-             pb.selling_price,
-             pb.quantity_on_hand AS available_stock
-      FROM phar_purchase_receipt_items pri
-      JOIN phar_products p ON p.id = pri.product_id
-      JOIN phar_product_batches pb ON pb.id = pri.product_batch_id
-      LEFT JOIN phar_product_units pu ON pu.id = pri.purchase_unit_id
-      WHERE pri.product_id = $1::uuid
-        AND COALESCE(pb.is_delete, FALSE) = FALSE
-        AND pb.quantity_on_hand > 0
-      ORDER BY pri.created_at ASC
+      SELECT * FROM (
+        SELECT DISTINCT ON (pri.product_batch_id)
+               pri.*, p.name AS product_name, pb.batch_number AS batch_number,
+               pu.name AS purchase_unit_name,
+               pb.selling_price,
+               pb.quantity_on_hand AS available_stock
+        FROM phar_purchase_receipt_items pri
+        JOIN phar_products p ON p.id = pri.product_id
+        JOIN phar_product_batches pb ON pb.id = pri.product_batch_id
+        LEFT JOIN phar_product_units pu ON pu.id = pri.purchase_unit_id
+        WHERE pri.product_id = $1::uuid
+          AND COALESCE(pb.is_delete, FALSE) = FALSE
+          AND pb.quantity_on_hand > 0
+        ORDER BY pri.product_batch_id, pri.created_at DESC
+      ) t
+      ORDER BY t.created_at ASC
       `,
       [productId],
     );
