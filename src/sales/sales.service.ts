@@ -1025,20 +1025,19 @@ export class SalesService {
       await client.query(
         `
         INSERT INTO phar_sale_payments (
-          invoice_id, payment_number, company_id, shop_id, branch_id,
+          invoice_id, payment_number, shop_id, branch_id,
           reference_type, reference_id, payment_method_id, amount,
           status, paid_at, received_by, notes
         ) VALUES (
           $1::uuid, $2,
-          $3::uuid, $4::uuid, $5::uuid,
-          $6, $7::uuid, $8::uuid, $9,
-          $10, $11::timestamptz, $12::uuid, $13
+          $3::uuid, $4::uuid,
+          $5, $6::uuid, $7::uuid, $8,
+          $9, $10::timestamptz, $11::uuid, $12
         )
         `,
         [
           invoiceId,
           paymentNumber,
-          p.company_id ?? null,
           p.shop_id ?? null,
           p.branch_id ?? null,
           p.reference_type ?? null,
@@ -1072,7 +1071,7 @@ export class SalesService {
     const result = await this.databaseService.query(
       `
       SELECT
-        sp.id, sp.invoice_id, sp.payment_number, sp.company_id, sp.shop_id, sp.branch_id,
+        sp.id, sp.invoice_id, sp.payment_number, sp.shop_id, sp.branch_id,
         sp.reference_type, sp.reference_id, sp.payment_method_id,
         pm.name AS payment_method_name, pm.method_type AS payment_method_type,
         sp.amount, sp.status, sp.paid_at, sp.received_by, sp.notes, sp.created_at

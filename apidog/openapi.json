@@ -7411,6 +7411,7 @@
     },
     "/api/v1/purchase_receipts/available-items": {
       "get": {
+        "description": "Returns purchase receipt items for the given product where the linked batch is not deleted and still has quantity_on_hand > 0 (i.e. not fully sold or returned). Each item includes the batch selling_price and available_stock (the batch's current quantity_on_hand).",
         "operationId": "PurchaseReceiptsController_listAvailableItems",
         "parameters": [
           {
@@ -7430,7 +7431,6 @@
           }
         },
         "summary": "List receipt items for a product whose batch still has stock available for sale",
-        "description": "Returns purchase receipt items for the given product where the linked batch is not deleted and still has quantity_on_hand > 0 (i.e. not fully sold or returned). Each item includes the batch selling_price and available_stock (the batch's current quantity_on_hand).",
         "tags": [
           "PurchaseReceipts"
         ]
@@ -10797,11 +10797,6 @@
           "amount": {
             "type": "number",
             "description": "Amount paid via this method"
-          },
-          "company_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Customer/company making the payment"
           },
           "shop_id": {
             "type": "string",

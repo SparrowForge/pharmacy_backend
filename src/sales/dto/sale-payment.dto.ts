@@ -15,11 +15,6 @@ export class SalePaymentDto {
   @Min(0.01)
   amount: number;
 
-  @ApiPropertyOptional({ format: 'uuid', description: 'Customer/company making the payment' })
-  @IsOptional()
-  @IsUUID()
-  company_id?: string;
-
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
