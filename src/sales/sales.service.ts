@@ -143,7 +143,7 @@ export class SalesService {
   }
 
   async create(dto: CreateSalesInvoiceDto, createdBy?: string) {
-    return this.databaseService.withTransaction(async (client) => {
+    const invoiceId = await this.databaseService.withTransaction(async (client) => {
       const requestedStatus = dto.status ?? 'draft';
       const statusForInsert = requestedStatus === 'completed' ? 'draft' : requestedStatus;
       const invoiceNumber =
@@ -151,54 +151,58 @@ export class SalesService {
 
       const saleType = dto.sale_type ?? 'cash';
 
-      const insertedInvoice = await client.query<SalesInvoiceRow>(
-        `
-        INSERT INTO phar_sales_invoices (
-          invoice_number,
-          customer_id,
-          shop_id,
-          branch_id,
-          created_by,
-          status,
-          sale_type,
-          discount_amount,
-          tax_amount,
-          paid_amount,
-          invoice_date,
-          notes
-        ) VALUES (
-          $1,
-          $2::uuid,
-          $3::uuid,
-          $4::uuid,
-          $5::uuid,
-          $6,
-          $7,
-          $8,
-          $9,
-          $10,
-          COALESCE($11::timestamptz, now()),
-          $12
-        )
-        RETURNING *
-        `,
-        [
-          invoiceNumber,
-          dto.customer_id ?? null,
-          dto.shop_id ?? null,
-          dto.branch_id ?? null,
-          createdBy ?? null,
-          statusForInsert,
-          saleType,
-          dto.discount_amount ?? 0,
-          dto.tax_amount ?? 0,
-          dto.paid_amount ?? 0,
-          dto.invoice_date ?? null,
-          dto.notes ?? null,
-        ],
-      );
-
-      const invoice = insertedInvoice.rows[0];
+      let invoice: SalesInvoiceRow;
+      try {
+        const insertedInvoice = await client.query<SalesInvoiceRow>(
+          `
+          INSERT INTO phar_sales_invoices (
+            invoice_number,
+            customer_id,
+            shop_id,
+            branch_id,
+            created_by,
+            status,
+            sale_type,
+            discount_amount,
+            tax_amount,
+            paid_amount,
+            invoice_date,
+            notes
+          ) VALUES (
+            $1,
+            $2::uuid,
+            $3::uuid,
+            $4::uuid,
+            $5::uuid,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            COALESCE($11::timestamptz, now()),
+            $12
+          )
+          RETURNING *
+          `,
+          [
+            invoiceNumber,
+            dto.customer_id ?? null,
+            dto.shop_id ?? null,
+            dto.branch_id ?? null,
+            createdBy ?? null,
+            statusForInsert,
+            saleType,
+            dto.discount_amount ?? 0,
+            dto.tax_amount ?? 0,
+            dto.paid_amount ?? 0,
+            dto.invoice_date ?? null,
+            dto.notes ?? null,
+          ],
+        );
+        invoice = insertedInvoice.rows[0];
+      } catch (error: unknown) {
+        this.handlePgError(error, 'invoice');
+      }
 
       for (const item of dto.items) {
         await this.insertInvoiceItem(client, invoice.id, item);
@@ -220,8 +224,10 @@ export class SalesService {
         });
       }
 
-      return this.getById(invoice.id);
+      return invoice.id;
     });
+
+    return this.getById(invoiceId);
   }
 
   async update(id: string, dto: UpdateSalesInvoiceDto) {
@@ -1022,34 +1028,38 @@ export class SalesService {
     for (const p of payments) {
       const amount = this.ensureNonNegative(p.amount, 'payment.amount');
       const paymentNumber = await this.generatePaymentNumber(client);
-      await client.query(
-        `
-        INSERT INTO phar_sale_payments (
-          invoice_id, payment_number, shop_id, branch_id,
-          reference_type, reference_id, payment_method_id, amount,
-          status, paid_at, received_by, notes
-        ) VALUES (
-          $1::uuid, $2,
-          $3::uuid, $4::uuid,
-          $5, $6::uuid, $7::uuid, $8,
-          $9, $10::timestamptz, $11::uuid, $12
-        )
-        `,
-        [
-          invoiceId,
-          paymentNumber,
-          p.shop_id ?? null,
-          p.branch_id ?? null,
-          p.reference_type ?? null,
-          p.reference_id ?? null,
-          p.payment_method_id ?? null,
-          amount,
-          p.status ?? 'paid',
-          p.paid_at ?? null,
-          receivedBy ?? null,
-          p.notes ?? null,
-        ],
-      );
+      try {
+        await client.query(
+          `
+          INSERT INTO phar_sale_payments (
+            invoice_id, payment_number, shop_id, branch_id,
+            reference_type, reference_id, payment_method_id, amount,
+            status, paid_at, received_by, notes
+          ) VALUES (
+            $1::uuid, $2,
+            $3::uuid, $4::uuid,
+            $5, $6::uuid, $7::uuid, $8,
+            $9, $10::timestamptz, $11::uuid, $12
+          )
+          `,
+          [
+            invoiceId,
+            paymentNumber,
+            p.shop_id ?? null,
+            p.branch_id ?? null,
+            p.reference_type ?? null,
+            p.reference_id ?? null,
+            p.payment_method_id ?? null,
+            amount,
+            p.status ?? 'paid',
+            p.paid_at ?? null,
+            receivedBy ?? null,
+            p.notes ?? null,
+          ],
+        );
+      } catch (error: unknown) {
+        this.handlePgError(error, 'payment');
+      }
     }
 
     await this.syncInvoicePaidAmount(client, invoiceId);
@@ -1151,6 +1161,37 @@ export class SalesService {
 
   private roundMoney(value: number) {
     return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
+  private getPgErrorCode(error: unknown) {
+    if (typeof error !== 'object' || error === null) return null;
+    if (!('code' in error)) return null;
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : null;
+  }
+
+  private handlePgError(error: unknown, context: 'invoice' | 'payment') {
+    const code = this.getPgErrorCode(error);
+
+    if (code === '23505') {
+      if (context === 'invoice') {
+        throw new BadRequestException('Invoice number already exists');
+      }
+      throw new BadRequestException('Duplicate payment entry');
+    }
+
+    if (code === '23503') {
+      if (context === 'invoice') {
+        throw new BadRequestException('Invalid customer, shop, or branch reference');
+      }
+      throw new BadRequestException('Invalid payment reference or payment method id');
+    }
+
+    if (code === '22P02') {
+      throw new BadRequestException('Invalid UUID or input syntax in sales invoice data');
+    }
+
+    throw error;
   }
 
   private toNumber(value: unknown) {
