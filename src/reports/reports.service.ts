@@ -73,10 +73,7 @@ export class ReportsService {
       FROM phar_products p
       LEFT JOIN phar_product_categories cat ON cat.id = p.category_id
       LEFT JOIN LATERAL (
-        SELECT COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_receipt'), 0)
-              - COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_return'), 0)
-              - COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sale'), 0)
-              + COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sales_return'), 0) AS qty        
+        SELECT COALESCE(SUM(sm.quantity), 0) AS qty        
     FROM phar_stock_movements sm
         WHERE sm.product_id = p.id
           AND sm.created_at < $1::date
@@ -84,8 +81,8 @@ export class ReportsService {
       LEFT JOIN LATERAL (
         SELECT
           COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_receipt'), 0) AS receive_qty,
-          COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_return'), 0) AS purchase_return_qty,
-          COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sale'), 0) AS sales_qty,
+          -COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_return'), 0) AS purchase_return_qty,
+          -COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sale'), 0) AS sales_qty,
           COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sales_return'), 0) AS sales_return_qty
         FROM phar_stock_movements sm
         WHERE sm.product_id = p.id
@@ -93,10 +90,7 @@ export class ReportsService {
           AND sm.created_at < ($2::date + INTERVAL '1 day')
       ) period ON TRUE
       LEFT JOIN LATERAL (
-        SELECT  COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_receipt'), 0)
-                - COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'purchase_return'), 0)
-                - COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sale'), 0)
-                + COALESCE(SUM(sm.quantity) FILTER (WHERE sm.movement_type = 'sales_return'), 0) AS qty
+        SELECT COALESCE(SUM(sm.quantity), 0) AS qty
     FROM phar_stock_movements sm
         WHERE sm.product_id = p.id
           AND sm.created_at < ($2::date + INTERVAL '1 day')
