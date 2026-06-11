@@ -7971,6 +7971,224 @@
           "SalesInvoices"
         ]
       }
+    },
+    "/api/v1/sales_returns": {
+      "get": {
+        "operationId": "SalesReturnController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Text search across string columns",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "Return soft-deleted records too (true/false)",
+            "schema": {
+              "default": false,
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "pending",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "customer_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sales_invoice_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List sales returns",
+        "description": "Returns a paginated list of sales returns. Filter by status, customer, or originating invoice. Pass `includeDeleted=true` to include soft-deleted records.",
+        "tags": [
+          "SalesReturns"
+        ]
+      },
+      "post": {
+        "operationId": "SalesReturnController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSalesReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create sales return and restore stock",
+        "description": "Creates a return against a completed sales invoice. Stock is immediately added back for every returned item. Provide `sales_invoice_item_id` for each line to link back to the original invoice items.",
+        "tags": [
+          "SalesReturns"
+        ]
+      }
+    },
+    "/api/v1/sales_returns/{id}": {
+      "get": {
+        "operationId": "SalesReturnController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get sales return details by id",
+        "description": "Returns the full sales return header and its line items.",
+        "tags": [
+          "SalesReturns"
+        ]
+      },
+      "patch": {
+        "operationId": "SalesReturnController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSalesReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update sales return",
+        "description": "Updates the return header fields. When `items` is provided the existing lines are fully replaced: current stock effects are reversed, then the new lines are re-applied.",
+        "tags": [
+          "SalesReturns"
+        ]
+      },
+      "delete": {
+        "operationId": "SalesReturnController_softDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Soft delete sales return and reverse stock",
+        "description": "Marks the return as deleted (is_delete=true, status=cancelled) and reverses the stock that was added back on creation.",
+        "tags": [
+          "SalesReturns"
+        ]
+      }
+    },
+    "/api/v1/sales_returns/{id}/permanent": {
+      "delete": {
+        "operationId": "SalesReturnController_permanentDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Permanently delete sales return and reverse stock",
+        "description": "Removes the sales return record from the database entirely. If it has not already been soft-deleted, stock is reversed first.",
+        "tags": [
+          "SalesReturns"
+        ]
+      }
     }
   },
   "info": {
@@ -11114,6 +11332,115 @@
           },
           "notes": {
             "type": "string"
+          }
+        }
+      },
+      "CreateSalesReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "sales_invoice_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reference to the original sales invoice item being returned"
+          },
+          "return_unit_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Return unit override — defaults to the original sales unit on the invoice item"
+          },
+          "return_qty": {
+            "type": "number",
+            "minimum": 0.000001,
+            "description": "Return quantity in the return unit"
+          },
+          "unit_price": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Unit price override for the return — defaults to original invoice item price"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for returning this item"
+          }
+        },
+        "required": [
+          "sales_invoice_item_id",
+          "return_qty"
+        ]
+      },
+      "CreateSalesReturnDto": {
+        "type": "object",
+        "properties": {
+          "sales_invoice_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The completed sales invoice this return is created against"
+          },
+          "return_number": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Return number — auto-generated if omitted"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "pending",
+              "cancelled"
+            ],
+            "default": "completed"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Overall reason for the return"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "return_date": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Return date — defaults to now"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateSalesReturnItemDto"
+            }
+          }
+        },
+        "required": [
+          "sales_invoice_id",
+          "items"
+        ]
+      },
+      "UpdateSalesReturnDto": {
+        "type": "object",
+        "properties": {
+          "return_number": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "pending",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "description": "When provided, fully replaces the return lines. Existing stock effects are reversed and new lines are re-applied.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateSalesReturnItemDto"
+            }
           }
         }
       }

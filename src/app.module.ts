@@ -11,6 +11,7 @@ import { PurchaseReturnModule } from './purchase-return/purchase-return.module';
 import { PurchaseReceiptsModule } from './purchase-receipts/purchase-receipts.module';
 import { ReportsModule } from './reports/reports.module';
 import { SalesModule } from './sales/sales.module';
+import { SalesReturnModule } from './sales-return/sales-return.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     PurchaseReceiptsModule,
     ReportsModule,
     SalesModule,
+    SalesReturnModule,
   ],
   controllers: [AppController],
   providers: [AppService],
