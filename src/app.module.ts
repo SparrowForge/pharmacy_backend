@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { PurchaseModule } from './purchase/purchase.module';
 import { PurchaseReturnModule } from './purchase-return/purchase-return.module';
 import { PurchaseReceiptsModule } from './purchase-receipts/purchase-receipts.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { SalesModule } from './sales/sales.module';
 import { SalesReturnModule } from './sales-return/sales-return.module';
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module';
     PurchaseModule,
     PurchaseReturnModule,
     PurchaseReceiptsModule,
+    DashboardModule,
     ReportsModule,
     SalesModule,
     SalesReturnModule,

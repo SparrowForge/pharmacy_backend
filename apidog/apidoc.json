@@ -8189,6 +8189,346 @@
           "SalesReturns"
         ]
       }
+    },
+    "/api/v1/dashboard/summary": {
+      "get": {
+        "operationId": "DashboardController_getSummary",
+        "parameters": [
+          {
+            "name": "expiry_days",
+            "required": false,
+            "in": "query",
+            "description": "Days ahead to check for expiring batches",
+            "schema": {
+              "minimum": 1,
+              "default": 30,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "today_sales": {
+                      "type": "number",
+                      "description": "Total sales amount for today (completed invoices)"
+                    },
+                    "total_orders": {
+                      "type": "integer",
+                      "description": "Total non-cancelled orders for today"
+                    },
+                    "low_stock_items": {
+                      "type": "integer",
+                      "description": "Products where stock from movements <= minimum_stock"
+                    },
+                    "expiring_soon": {
+                      "type": "integer",
+                      "description": "Batches expiring within expiry_days days"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dashboard summary: today's sales amount, total orders, low stock count, expiring soon count",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/today-sales": {
+      "get": {
+        "operationId": "DashboardController_getTodaySales",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "total_pages": { "type": "integer" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "invoice_number": { "type": "string" },
+                          "status": { "type": "string" },
+                          "sale_type": { "type": "string" },
+                          "subtotal": { "type": "number" },
+                          "discount_amount": { "type": "number" },
+                          "tax_amount": { "type": "number" },
+                          "total_amount": { "type": "number" },
+                          "paid_amount": { "type": "number" },
+                          "due_amount": { "type": "number" },
+                          "invoice_date": { "type": "string", "format": "date-time" },
+                          "created_at": { "type": "string", "format": "date-time" },
+                          "customer_name": { "type": "string" },
+                          "customer_code": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Paginated list of today's completed sales invoices",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/total-orders": {
+      "get": {
+        "operationId": "DashboardController_getTotalOrders",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "total_pages": { "type": "integer" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "invoice_number": { "type": "string" },
+                          "status": { "type": "string" },
+                          "sale_type": { "type": "string" },
+                          "total_amount": { "type": "number" },
+                          "paid_amount": { "type": "number" },
+                          "due_amount": { "type": "number" },
+                          "invoice_date": { "type": "string", "format": "date-time" },
+                          "created_at": { "type": "string", "format": "date-time" },
+                          "customer_name": { "type": "string" },
+                          "customer_code": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Paginated list of today's orders (all non-cancelled statuses)",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/low-stock": {
+      "get": {
+        "operationId": "DashboardController_getLowStock",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "total_pages": { "type": "integer" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "sku": { "type": "string" },
+                          "barcode": { "type": "string" },
+                          "name": { "type": "string" },
+                          "current_stock": { "type": "integer", "description": "Calculated from stock movements" },
+                          "minimum_stock": { "type": "integer" },
+                          "reorder_level": { "type": "integer" },
+                          "rack_no": { "type": "string" },
+                          "category_name": { "type": "string" },
+                          "brand_name": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Paginated list of products at or below minimum stock level",
+        "tags": [
+          "Dashboard"
+        ]
+      }
+    },
+    "/api/v1/dashboard/expiring-soon": {
+      "get": {
+        "operationId": "DashboardController_getExpiringSoon",
+        "parameters": [
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "description": "Days ahead to check for expiring batches",
+            "schema": {
+              "minimum": 1,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "total_pages": { "type": "integer" },
+                    "days": { "type": "integer" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "batch_number": { "type": "string" },
+                          "barcode": { "type": "string" },
+                          "expiry_date": { "type": "string", "format": "date" },
+                          "quantity_on_hand": { "type": "integer" },
+                          "purchase_price": { "type": "number" },
+                          "selling_price": { "type": "number" },
+                          "status": { "type": "string" },
+                          "product_id": { "type": "string", "format": "uuid" },
+                          "product_name": { "type": "string" },
+                          "product_sku": { "type": "string" },
+                          "category_name": { "type": "string" },
+                          "days_until_expiry": { "type": "integer" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Paginated list of product batches expiring within N days (default 30)",
+        "tags": [
+          "Dashboard"
+        ]
+      }
     }
   },
   "info": {
