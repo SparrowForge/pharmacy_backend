@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -152,16 +153,19 @@ export class BasicCrudService {
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
     const colList = keys.map((k) => this.quoteIdent(k)).join(', ');
 
-    const result = await this.databaseService.query(
-      `
-      INSERT INTO ${this.qualifiedTable(table)} (${colList})
-      VALUES (${placeholders})
-      RETURNING *
-      `,
-      values,
-    );
-
-    return result.rows[0];
+    try {
+      const result = await this.databaseService.query(
+        `
+        INSERT INTO ${this.qualifiedTable(table)} (${colList})
+        VALUES (${placeholders})
+        RETURNING *
+        `,
+        values,
+      );
+      return result.rows[0];
+    } catch (error) {
+      this.handleDbError(error, entity);
+    }
   }
 
   async update(entity: string, table: string, id: string, payload: object) {
@@ -182,17 +186,20 @@ export class BasicCrudService {
       .map((key, idx) => `${this.quoteIdent(key)} = $${idx + 1}`)
       .join(', ');
 
-    const result = await this.databaseService.query(
-      `
-      UPDATE ${this.qualifiedTable(table)}
-      SET ${setClause}
-      WHERE id = $${keys.length + 1}::uuid
-      RETURNING *
-      `,
-      [...values, id],
-    );
-
-    return result.rows[0];
+    try {
+      const result = await this.databaseService.query(
+        `
+        UPDATE ${this.qualifiedTable(table)}
+        SET ${setClause}
+        WHERE id = $${keys.length + 1}::uuid
+        RETURNING *
+        `,
+        [...values, id],
+      );
+      return result.rows[0];
+    } catch (error) {
+      this.handleDbError(error, entity);
+    }
   }
 
   async softDelete(entity: string, table: string, id: string) {
@@ -335,7 +342,10 @@ export class BasicCrudService {
     const validKeys = keys.filter(
       (key) => Object.prototype.hasOwnProperty.call(payload, key) && payload[key] !== undefined,
     );
-    const values = validKeys.map((key) => payload[key]);
+    const values = validKeys.map((key) => {
+      const val = payload[key];
+      return val === '' ? null : val;
+    });
     return { keys: validKeys, values };
   }
 
@@ -377,5 +387,28 @@ export class BasicCrudService {
 
   private quoteIdent(identifier: string) {
     return `"${identifier.replaceAll('"', '""')}"`;
+  }
+
+  private handleDbError(error: unknown, entity: string): never {
+    const err = error as { code?: string; detail?: string; constraint?: string };
+    if (err?.code === '23505') {
+      const detail = err.detail ?? err.constraint ?? 'unknown field';
+      throw new ConflictException(
+        `Duplicate value violates unique constraint for "${entity}": ${detail}`,
+      );
+    }
+    if (err?.code === '23503') {
+      const detail = err.detail ?? err.constraint ?? 'unknown reference';
+      throw new BadRequestException(
+        `Invalid foreign key reference for "${entity}": ${detail}`,
+      );
+    }
+    if (err?.code === '23502') {
+      const detail = err.detail ?? err.constraint ?? 'unknown column';
+      throw new BadRequestException(
+        `Not-null constraint violation for "${entity}": ${detail}`,
+      );
+    }
+    throw error;
   }
 }
