@@ -2,11 +2,14 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PoolClient, QueryResultRow } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { AddPurchaseOrderItemDto } from './dto/add-purchase-order-item.dto';
+import { AddPurchasePaymentsDto } from './dto/add-purchase-payments.dto';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
 import { CreatePurchaseReturnDto } from './dto/create-purchase-return.dto';
 import { CreatePurchaseReturnItemDto } from './dto/create-purchase-return-item.dto';
 import { ListPurchaseOrdersQueryDto } from './dto/list-purchase-orders-query.dto';
+import { PurchasePaymentDto } from './dto/purchase-payment.dto';
 import { ReceivePurchaseOrderDto } from './dto/receive-purchase-order.dto';
+import { SupplierDueOrdersQueryDto } from './dto/supplier-due-orders-query.dto';
 import { UpdatePurchaseOrderItemDto } from './dto/update-purchase-order-item.dto';
 import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 
@@ -22,6 +25,8 @@ type PurchaseOrderRow = QueryResultRow & {
   tax_amount: string;
   shipping_cost: string;
   total_amount: string;
+  paid_amount: string;
+  due_amount: string;
   phar_payment_status: string;
   expected_delivery_date: string | null;
   delivery_date: string | null;
@@ -153,11 +158,15 @@ export class PurchaseService {
 
   async getById(id: string, client?: PoolClient) {
     const order = await this.getOrderById(id, client);
-    const items = await this.getOrderItems(id, client);
+    const [items, payments] = await Promise.all([
+      this.getOrderItems(id, client),
+      this.getPurchaseOrderPayments(id, client),
+    ]);
 
     return {
       ...order,
       items,
+      payments,
     };
   }
 
@@ -1009,6 +1018,248 @@ export class PurchaseService {
     }
   }
 
+  async addPaymentToPurchaseOrder(
+    orderId: string,
+    dto: AddPurchasePaymentsDto,
+    paidBy?: string,
+  ) {
+    return this.databaseService.withTransaction(async (client) => {
+      const order = await this.ensureOrderExists(client, orderId);
+
+      const totalPaymentAmount = dto.payments.reduce(
+        (sum, p) => sum + this.toNumber(p.amount),
+        0,
+      );
+
+      const returnCredit = await this.getPurchaseReturnCredit(client, orderId);
+      const maxPayable = this.roundMoney(
+        this.toNumber(order.total_amount) - returnCredit,
+      );
+      const alreadyPaid = this.toNumber(order.paid_amount ?? 0);
+      const remainingDue = this.roundMoney(maxPayable - alreadyPaid);
+
+      if (remainingDue <= 0) {
+        throw new BadRequestException('This purchase order has no outstanding balance.');
+      }
+
+      if (totalPaymentAmount > remainingDue + 0.001) {
+        throw new BadRequestException(
+          `Total payment amount (${this.roundMoney(totalPaymentAmount)}) exceeds outstanding due amount (${remainingDue})`,
+        );
+      }
+
+      await this.insertPurchasePayments(client, orderId, dto.payments, paidBy);
+      await this.syncPurchaseOrderPaidAmount(client, orderId);
+      return this.getById(orderId, client);
+    });
+  }
+
+  async getSupplierDueOrders(supplierId: string, query: SupplierDueOrdersQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const offset = (page - 1) * limit;
+
+    const countResult = await this.databaseService.query<{ total: number }>(
+      `
+      SELECT COUNT(*)::int AS total
+      FROM phar_purchase_orders po
+      WHERE po.supplier_id = $1::uuid
+        AND po.due_amount > 0
+      `,
+      [supplierId],
+    );
+
+    const dataResult = await this.databaseService.query(
+      `
+      SELECT
+        po.id,
+        po.po_number,
+        po.placed_at,
+        po.status,
+        po.phar_payment_status,
+        po.total_amount,
+        po.paid_amount,
+        po.due_amount,
+        c.name AS supplier_name,
+        COALESCE((
+          SELECT SUM(pr.total_amount)
+          FROM phar_purchase_returns pr
+          WHERE pr.purchase_order_id = po.id AND pr.status = 'completed'
+        ), 0) AS return_amount,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', pp.id,
+              'payment_number', pp.payment_number,
+              'payment_method_id', pp.payment_method_id,
+              'payment_method_name', pm.name,
+              'amount', pp.amount,
+              'status', pp.status,
+              'paid_at', pp.paid_at,
+              'notes', pp.notes
+            ) ORDER BY pp.created_at ASC
+          ) FILTER (WHERE pp.id IS NOT NULL),
+          '[]'
+        ) AS payments
+      FROM phar_purchase_orders po
+      JOIN phar_companies c ON c.id = po.supplier_id
+      LEFT JOIN phar_purchase_payments pp ON pp.purchase_order_id = po.id
+      LEFT JOIN phar_payment_methods pm ON pm.id = pp.payment_method_id
+      WHERE po.supplier_id = $1::uuid
+        AND po.due_amount > 0
+      GROUP BY po.id, c.name
+      ORDER BY po.placed_at DESC
+      LIMIT $2
+      OFFSET $3
+      `,
+      [supplierId, limit, offset],
+    );
+
+    const total = countResult.rows[0]?.total ?? 0;
+    const rows = dataResult.rows.map((row: QueryResultRow) => ({
+      ...row,
+      total_amount: this.toNumber(row.total_amount),
+      paid_amount: this.toNumber(row.paid_amount),
+      due_amount: this.toNumber(row.due_amount),
+      return_amount: this.toNumber(row.return_amount),
+    }));
+
+    const totalDue = rows.reduce((sum: number, r: { due_amount: number }) => sum + r.due_amount, 0);
+
+    return {
+      supplier_id: supplierId,
+      page,
+      limit,
+      total,
+      total_due: this.roundMoney(totalDue),
+      data: rows,
+    };
+  }
+
+  private async getPurchaseOrderPayments(orderId: string, client?: PoolClient) {
+    const executor = client ?? this.databaseService;
+    const result = await executor.query(
+      `
+      SELECT
+        pp.id, pp.purchase_order_id, pp.payment_number, pp.shop_id, pp.branch_id,
+        pp.reference_type, pp.reference_id, pp.payment_method_id,
+        pm.name AS payment_method_name, pm.method_type AS payment_method_type,
+        pp.amount, pp.status, pp.paid_at, pp.paid_by, pp.notes, pp.created_at
+      FROM phar_purchase_payments pp
+      LEFT JOIN phar_payment_methods pm ON pm.id = pp.payment_method_id
+      WHERE pp.purchase_order_id = $1::uuid
+      ORDER BY pp.created_at ASC
+      `,
+      [orderId],
+    );
+
+    return result.rows.map((row) => ({
+      ...row,
+      amount: this.toNumber(row.amount),
+    }));
+  }
+
+  private async insertPurchasePayments(
+    client: PoolClient,
+    orderId: string,
+    payments: PurchasePaymentDto[],
+    paidBy?: string,
+  ) {
+    for (const p of payments) {
+      const amount = this.ensureNonNegative(p.amount, 'payment.amount');
+      const paymentNumber = await this.generatePurchasePaymentNumber(client);
+      await client.query(
+        `
+        INSERT INTO phar_purchase_payments (
+          purchase_order_id, payment_number, shop_id, branch_id,
+          reference_type, reference_id, payment_method_id, amount,
+          status, paid_at, paid_by, notes
+        ) VALUES (
+          $1::uuid, $2,
+          $3::uuid, $4::uuid,
+          $5, $6::uuid, $7::uuid, $8,
+          $9, $10::timestamptz, $11::uuid, $12
+        )
+        `,
+        [
+          orderId,
+          paymentNumber,
+          p.shop_id ?? null,
+          p.branch_id ?? null,
+          p.reference_type ?? null,
+          p.reference_id ?? null,
+          p.payment_method_id ?? null,
+          amount,
+          p.status ?? 'paid',
+          p.paid_at ?? null,
+          paidBy ?? null,
+          p.notes ?? null,
+        ],
+      );
+    }
+  }
+
+  private async syncPurchaseOrderPaidAmount(client: PoolClient, orderId: string) {
+    const orderResult = await client.query<PurchaseOrderRow>(
+      `SELECT total_amount FROM phar_purchase_orders WHERE id = $1::uuid LIMIT 1`,
+      [orderId],
+    );
+    const order = orderResult.rows[0];
+    if (!order) return;
+
+    const paidResult = await client.query<{ total_paid: string }>(
+      `SELECT COALESCE(SUM(amount), 0) AS total_paid FROM phar_purchase_payments WHERE purchase_order_id = $1::uuid`,
+      [orderId],
+    );
+    const totalPaid = this.roundMoney(this.toNumber(paidResult.rows[0]?.total_paid));
+
+    const returnCredit = await this.getPurchaseReturnCredit(client, orderId);
+    const totalAmount = this.toNumber(order.total_amount);
+    const dueAmount = this.roundMoney(Math.max(totalAmount - returnCredit - totalPaid, 0));
+
+    const paymentStatus =
+      dueAmount <= 0
+        ? 'paid'
+        : totalPaid > 0 || returnCredit > 0
+          ? 'partial'
+          : 'pending';
+
+    await client.query(
+      `
+      UPDATE phar_purchase_orders
+      SET paid_amount = $1, due_amount = $2, phar_payment_status = $3
+      WHERE id = $4::uuid
+      `,
+      [totalPaid, dueAmount, paymentStatus, orderId],
+    );
+  }
+
+  private async getPurchaseReturnCredit(client: PoolClient, orderId: string) {
+    const result = await client.query<{ total: string }>(
+      `
+      SELECT COALESCE(SUM(total_amount), 0) AS total
+      FROM phar_purchase_returns
+      WHERE purchase_order_id = $1::uuid AND status = 'completed'
+      `,
+      [orderId],
+    );
+    return this.roundMoney(this.toNumber(result.rows[0]?.total));
+  }
+
+  private async generatePurchasePaymentNumber(client: PoolClient) {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const timestamp = Date.now();
+      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      const candidate = `PPAY-${timestamp}-${random}`;
+      const exists = await client.query<{ exists: boolean }>(
+        `SELECT EXISTS (SELECT 1 FROM phar_purchase_payments WHERE payment_number = $1) AS exists`,
+        [candidate],
+      );
+      if (!exists.rows[0]?.exists) return candidate;
+    }
+    throw new BadRequestException('Failed to generate unique purchase payment number');
+  }
+
   private async insertOrderItem(
     client: PoolClient,
     orderId: string,
@@ -1274,6 +1525,8 @@ export class PurchaseService {
       tax_amount: this.toNumber(order.tax_amount),
       shipping_cost: this.toNumber(order.shipping_cost),
       total_amount: this.toNumber(order.total_amount),
+      paid_amount: this.toNumber(order.paid_amount),
+      due_amount: this.toNumber(order.due_amount),
     };
   }
 

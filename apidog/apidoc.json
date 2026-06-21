@@ -7116,6 +7116,99 @@
         ]
       }
     },
+    "/api/v1/purchase_orders/{id}/payments": {
+      "post": {
+        "operationId": "PurchaseController_addPayment",
+        "summary": "Record supplier payments against a purchase order",
+        "description": "Accepts an array of payment lines, each with its own payment_method_id and amount — enabling split/multi-mode payment in one call. Purchase-return credits are automatically deducted from the payable amount before validation. Updates paid_amount, due_amount, and phar_payment_status on the order atomically. Returns the full updated purchase order including all payments.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Purchase order ID",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPurchasePaymentsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payments recorded; returns updated purchase order."
+          },
+          "400": {
+            "description": "No outstanding balance, payment exceeds due amount, or validation error."
+          },
+          "404": {
+            "description": "Purchase order not found."
+          }
+        },
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/api/v1/purchase_orders/suppliers/{supplierId}/due-orders": {
+      "get": {
+        "operationId": "PurchaseController_getSupplierDueOrders",
+        "summary": "List unpaid/partially-paid purchase orders for a supplier",
+        "description": "Returns all purchase orders for the given supplier where due_amount > 0, ordered by date descending. Each row includes total_amount, paid_amount, due_amount, return_amount, and a payments array with existing payment history. Response also includes total_due — the sum of all outstanding balances on the current page.",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the supplier company",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated due orders with total_due summary."
+          },
+          "400": {
+            "description": "Invalid UUID or query params."
+          }
+        },
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
     "/api/v1/purchase_return": {
       "get": {
         "operationId": "PurchaseReturnController_list",
@@ -7589,6 +7682,446 @@
           }
         },
         "summary": "Stock report (opening, receive, purchase return, sales, closing) over a date range, optionally filtered by category and product",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/purchases": {
+      "get": {
+        "operationId": "ReportsController_purchases",
+        "summary": "Purchase line-item report",
+        "description": "Returns one row per purchase-order item within the date range. Columns: date, po_number, supplier_name, product_name, category_name, purchase_qty, unit_cost, purchase_amount. Optional filters: supplier_id (company), category_id, product_id. Response includes page-level totals.total_qty and totals.total_amount.",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "supplier_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by supplier (company)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product category",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by a single product",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated purchase line items with aggregate totals."
+          },
+          "400": {
+            "description": "start_date is after end_date, or invalid query params."
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/sales": {
+      "get": {
+        "operationId": "ReportsController_sales",
+        "summary": "Sales line-item report",
+        "description": "Returns one row per completed sales-invoice item within the date range. Columns: date, invoice_number, customer_name, product_name, category_name, sales_qty, unit_price, sales_amount. Optional filters: customer_id (company), category_id, product_id. Response includes page-level totals.total_qty and totals.total_amount.",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": true,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": true,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "customer_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by customer (company)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product category",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by a single product",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated sales line items with aggregate totals."
+          },
+          "400": {
+            "description": "start_date is after end_date, or invalid query params."
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/suppliers/{supplierId}/statement": {
+      "get": {
+        "operationId": "ReportsController_supplierStatement",
+        "summary": "Supplier account statement",
+        "description": "Chronological ledger for a single supplier. Each row is one of three transaction types: purchase (debit), payment (credit), return (credit). The balance field on each row is the running net balance (debit − credit). Response also includes totals.total_debit, totals.total_credit, and totals.closing_balance.",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the supplier company",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "required": false,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": false,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ordered list of ledger entries with running balance and summary totals."
+          },
+          "400": {
+            "description": "Invalid UUID or query params."
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/customers/{customerId}/statement": {
+      "get": {
+        "operationId": "ReportsController_customerStatement",
+        "summary": "Customer account statement",
+        "description": "Chronological ledger for a single customer. Each row is one of three transaction types: sale (debit), payment (credit), return (credit). The balance field on each row is the running net balance (debit − credit). Response also includes totals.total_debit, totals.total_credit, and totals.closing_balance.",
+        "parameters": [
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "description": "ID of the customer company",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "required": false,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": false,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ordered list of ledger entries with running balance and summary totals."
+          },
+          "400": {
+            "description": "Invalid UUID or query params."
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/supplier-payments": {
+      "get": {
+        "operationId": "ReportsController_supplierPayments",
+        "summary": "Supplier payment report",
+        "description": "Lists all payments made to suppliers (phar_purchase_payments). Optional filters: start_date, end_date, company_id (supplier), payment_method_id. Each row includes payment_number, supplier_name, po_number, payment_method_name, amount, status, paid_at. Response includes total_amount across the current page.",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": false,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": false,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "company_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by supplier company",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "payment_method_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by payment method",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of supplier payments with a page total."
+          },
+          "400": {
+            "description": "Invalid query params."
+          }
+        },
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/customer-payments": {
+      "get": {
+        "operationId": "ReportsController_customerPayments",
+        "summary": "Customer payment report",
+        "description": "Lists all payments received from customers (phar_sale_payments). Optional filters: start_date, end_date, company_id (customer), payment_method_id. Each row includes payment_number, customer_name, invoice_number, payment_method_name, amount, status, paid_at. Response includes total_amount across the current page.",
+        "parameters": [
+          {
+            "name": "start_date",
+            "required": false,
+            "in": "query",
+            "description": "Range start date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "required": false,
+            "in": "query",
+            "description": "Range end date (inclusive), format YYYY-MM-DD",
+            "schema": {
+              "example": "2026-01-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "company_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by customer company",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "payment_method_id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by payment method",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 20,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of customer payments with a page total."
+          },
+          "400": {
+            "description": "Invalid query params."
+          }
+        },
         "tags": [
           "Reports"
         ]
@@ -11343,6 +11876,75 @@
             "type": "string"
           }
         }
+      },
+      "PurchasePaymentDto": {
+        "type": "object",
+        "properties": {
+          "payment_method_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID from phar_payment_methods table"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount paid via this method",
+            "minimum": 0.01
+          },
+          "shop_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference_type": {
+            "type": "string"
+          },
+          "reference_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "partial",
+              "paid",
+              "failed",
+              "cancelled"
+            ],
+            "default": "paid"
+          },
+          "paid_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the payment was physically made"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_method_id",
+          "amount"
+        ]
+      },
+      "AddPurchasePaymentsDto": {
+        "type": "object",
+        "properties": {
+          "payments": {
+            "description": "One or more payment lines — multiple methods allowed in a single call.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchasePaymentDto"
+            }
+          }
+        },
+        "required": [
+          "payments"
+        ]
       },
       "SalePaymentDto": {
         "type": "object",
