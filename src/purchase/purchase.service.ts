@@ -53,6 +53,7 @@ type PurchaseOrderItemRow = QueryResultRow & {
   batch_number: string | null;
   created_at: string;
   updated_at: string;
+  current_stock_qty: number;
   product?: {
     id: string;
     sku: string | null;
@@ -1298,6 +1299,11 @@ export class PurchaseService {
           'current_stock', p.current_stock
         ) AS product,
         p.name AS product_name,
+        COALESCE((
+          SELECT SUM(sm.quantity)
+          FROM phar_stock_movements sm
+          WHERE sm.product_id = poi.product_id
+        ), 0)::int AS current_stock_qty,
         p.unit_id AS stock_unit_id,
         p.default_unit_id,
         pu.name AS purchase_unit_name,
@@ -1316,6 +1322,7 @@ export class PurchaseService {
 
     return result.rows.map((row) => ({
       ...row,
+      current_stock_qty: this.toNumber(row.current_stock_qty),
       quantity_purchase: this.toNumber(row.quantity_purchase),
       quantity_received_purchase: this.toNumber(row.quantity_received_purchase),
       quantity_purchase_remaining: this.toNumber(row.quantity_purchase_remaining),
